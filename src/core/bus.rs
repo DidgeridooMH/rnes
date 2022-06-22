@@ -57,6 +57,18 @@ impl Bus {
         Err(RegionError { address })
     }
 
+    pub fn read_word(&self, address: u16) -> Result<u16, RegionError> {
+        let low_byte = self.read_byte(address)? as u16;
+        let high_byte = self.read_byte(address + 1)? as u16;
+        Ok(low_byte | (high_byte << 8))
+    }
+
+    pub fn read_word_bug(&self, address: u16) -> Result<u16, RegionError> {
+        let low_byte = self.read_byte(address)? as u16;
+        let high_byte = self.read_byte((address & 0xFF00) | ((address + 1) & 0xFF))? as u16;
+        Ok(low_byte | (high_byte << 8))
+    }
+
     pub fn write_byte(&mut self, address: u16, data: u8) -> Result<(), RegionError> {
         for mapping in &self.regions {
             if mapping.region.contains(&address) {
