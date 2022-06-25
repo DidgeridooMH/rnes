@@ -34,10 +34,10 @@ pub struct Bus {
 }
 
 impl Bus {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
             regions: Vec::new(),
-        }
+        }))
     }
 
     pub fn register_region(

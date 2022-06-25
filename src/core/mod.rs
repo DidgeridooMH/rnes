@@ -1,4 +1,3 @@
 mod bus;
-mod cpu;
+pub mod cpu;
 pub use bus::*;
-pub use cpu::*;
