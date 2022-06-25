@@ -78,4 +78,10 @@ impl Bus {
         }
         Err(RegionError { address })
     }
+
+    pub fn write_word(&mut self, address: u16, data: u16) -> Result<(), RegionError> {
+        self.write_byte(address, data as u8)?;
+        self.write_byte(address + 1, (data >> 8) as u8)?;
+        Ok(())
+    }
 }
