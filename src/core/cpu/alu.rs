@@ -41,6 +41,7 @@ impl CPU {
         match opcode_group {
             OpcodeGroup::ORA => self.ora(operand),
             OpcodeGroup::AND => self.and(operand),
+            OpcodeGroup::EOR => self.eor(operand),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
@@ -52,11 +53,16 @@ impl CPU {
     }
 
     fn ora(&mut self, operand: u8) {
-        self.a = self.a | operand;
+        self.a |= operand;
         self.set_nz_flags(self.a);
     }
 
     fn and(&mut self, operand: u8) {
+        self.a &= operand;
+        self.set_nz_flags(self.a);
+    }
+
+    fn eor(&mut self, operand: u8) {
         self.a = self.a & operand;
         self.set_nz_flags(self.a);
     }
