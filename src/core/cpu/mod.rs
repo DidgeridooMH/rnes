@@ -5,7 +5,7 @@ mod status;
 mod tests;
 
 use self::{memory::InternalRam, status::StatusRegister};
-use super::{Addressable, Bus};
+use super::{Addressable, Bus, CoreError};
 use std::{cell::RefCell, rc::Rc};
 
 pub struct CPU {
@@ -36,43 +36,53 @@ impl CPU {
         cpu
     }
 
+    pub fn tick(&mut self) -> Result<usize, CoreError> {
+        // TODO: Untested.
+        let opcode = self.bus.borrow().read_byte(self.pc)?;
+        let cycles = match opcode % 4 {
+            0 => todo!("control instructions need to be implemented"),
+            1 => self.run_alu_op(opcode)?,
+            2 => todo!("RMW operations need to be implemented"),
+            3 => todo!("unofficial operations need implemented"),
+            _ => unreachable!(),
+        };
+
+        Ok(cycles)
+    }
+
     fn set_nz_flags(&mut self, operand: u8) {
         self.p.set_n((operand >> 7) > 0);
         self.p.set_z(operand == 0);
     }
 
-    fn get_address(&self, address_mode: AddressMode) -> u16 {
+    fn get_address(&self, address_mode: AddressMode) -> Result<u16, CoreError> {
         match address_mode {
-            AddressMode::Immediate => self.pc + 1,
-            AddressMode::ZeroPage => self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
+            AddressMode::Immediate => Ok(self.pc + 1),
+            AddressMode::ZeroPage => {
+                Ok(self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16)
+            }
             AddressMode::ZeroPageX => {
-                (self.get_address(AddressMode::ZeroPage) + self.x as u16) % 256
+                Ok((self.get_address(AddressMode::ZeroPage)? + self.x as u16) % 256)
             }
             AddressMode::ZeroPageY => {
-                (self.get_address(AddressMode::ZeroPage) + self.y as u16) % 256
+                Ok((self.get_address(AddressMode::ZeroPage)? + self.y as u16) % 256)
             }
-            AddressMode::Absolute => self.bus.borrow_mut().read_word(self.pc + 1).unwrap(),
-            AddressMode::AbsoluteX => self.get_address(AddressMode::Absolute) + self.x as u16,
-            AddressMode::AbsoluteY => self.get_address(AddressMode::Absolute) + self.y as u16,
+            AddressMode::Absolute => self.bus.borrow_mut().read_word(self.pc + 1),
+            AddressMode::AbsoluteX => Ok(self.get_address(AddressMode::Absolute)? + self.x as u16),
+            AddressMode::AbsoluteY => Ok(self.get_address(AddressMode::Absolute)? + self.y as u16),
             AddressMode::IndirectX => {
-                let zero_page_address = self.get_address(AddressMode::ZeroPageX);
-                self.bus
-                    .borrow_mut()
-                    .read_word_bug(zero_page_address)
-                    .unwrap()
+                let zero_page_address = self.get_address(AddressMode::ZeroPageX)?;
+                self.bus.borrow_mut().read_word_bug(zero_page_address)
             }
             AddressMode::IndirectY => {
-                let zero_page_address = self.get_address(AddressMode::ZeroPage);
-                self.bus
-                    .borrow_mut()
-                    .read_word_bug(zero_page_address)
-                    .unwrap()
-                    + self.y as u16
+                let zero_page_address = self.get_address(AddressMode::ZeroPage)?;
+                Ok(self.bus.borrow_mut().read_word_bug(zero_page_address)? + self.y as u16)
             }
         }
     }
 }
 
+#[derive(Copy, Clone)]
 enum AddressMode {
     Immediate,
     ZeroPage,
@@ -83,4 +93,35 @@ enum AddressMode {
     AbsoluteY,
     IndirectX,
     IndirectY,
+}
+
+impl AddressMode {
+    pub fn from_code(opcode: u8) -> Result<AddressMode, CoreError> {
+        let mode_code = (opcode >> 2) & 0xF;
+        match mode_code {
+            0 => Ok(AddressMode::IndirectX),
+            1 => Ok(AddressMode::ZeroPage),
+            2 => Ok(AddressMode::Immediate),
+            3 => Ok(AddressMode::Absolute),
+            4 => Ok(AddressMode::IndirectY),
+            5 => Ok(AddressMode::ZeroPageX),
+            6 => Ok(AddressMode::AbsoluteY),
+            7 => Ok(AddressMode::AbsoluteX),
+            _ => Err(CoreError::AddressDecode(opcode)),
+        }
+    }
+
+    pub fn cycle_cost(&self) -> usize {
+        match &self {
+            AddressMode::Immediate => 1,
+            AddressMode::ZeroPage => 2,
+            AddressMode::ZeroPageX
+            | AddressMode::ZeroPageY
+            | AddressMode::Absolute
+            | AddressMode::AbsoluteX
+            | AddressMode::AbsoluteY => 3,
+            AddressMode::IndirectX => 6,
+            AddressMode::IndirectY => 5,
+        }
+    }
 }
