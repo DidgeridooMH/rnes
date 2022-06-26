@@ -55,28 +55,50 @@ impl CPU {
         self.p.set_z(operand == 0);
     }
 
-    fn get_address(&self, address_mode: AddressMode) -> Result<u16, CoreError> {
+    fn get_address(&self, address_mode: AddressMode) -> Result<(u16, bool), CoreError> {
         match address_mode {
-            AddressMode::Immediate => Ok(self.pc + 1),
-            AddressMode::ZeroPage => {
-                Ok(self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16)
+            AddressMode::Immediate => Ok((self.pc + 1, false)),
+            AddressMode::ZeroPage => Ok((
+                self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
+                false,
+            )),
+            AddressMode::ZeroPageX => Ok((
+                (self.get_address(AddressMode::ZeroPage)?.0 + self.x as u16) % 256,
+                false,
+            )),
+            AddressMode::ZeroPageY => Ok((
+                (self.get_address(AddressMode::ZeroPage)?.0 + self.y as u16) % 256,
+                false,
+            )),
+            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1)?, false)),
+            AddressMode::AbsoluteX => {
+                let address = self.get_address(AddressMode::Absolute)?.0;
+                Ok((
+                    address + self.x as u16,
+                    address & 0xFF00 != (address + self.x as u16) & 0xFF00,
+                ))
             }
-            AddressMode::ZeroPageX => {
-                Ok((self.get_address(AddressMode::ZeroPage)? + self.x as u16) % 256)
+            AddressMode::AbsoluteY => {
+                let address = self.get_address(AddressMode::Absolute)?.0;
+                Ok((
+                    address + self.y as u16,
+                    address & 0xFF00 != (address + self.y as u16) & 0xFF00,
+                ))
             }
-            AddressMode::ZeroPageY => {
-                Ok((self.get_address(AddressMode::ZeroPage)? + self.y as u16) % 256)
-            }
-            AddressMode::Absolute => self.bus.borrow_mut().read_word(self.pc + 1),
-            AddressMode::AbsoluteX => Ok(self.get_address(AddressMode::Absolute)? + self.x as u16),
-            AddressMode::AbsoluteY => Ok(self.get_address(AddressMode::Absolute)? + self.y as u16),
             AddressMode::IndirectX => {
-                let zero_page_address = self.get_address(AddressMode::ZeroPageX)?;
-                self.bus.borrow_mut().read_word_bug(zero_page_address)
+                let zero_page_address = self.get_address(AddressMode::ZeroPageX)?.0;
+                Ok((
+                    self.bus.borrow_mut().read_word_bug(zero_page_address)?,
+                    false,
+                ))
             }
             AddressMode::IndirectY => {
-                let zero_page_address = self.get_address(AddressMode::ZeroPage)?;
-                Ok(self.bus.borrow_mut().read_word_bug(zero_page_address)? + self.y as u16)
+                let zero_page_address = self.get_address(AddressMode::ZeroPage)?.0;
+                let address = self.bus.borrow_mut().read_word_bug(zero_page_address)?;
+                Ok((
+                    address + self.y as u16,
+                    address & 0xFF00 != (address + self.y as u16) & 0xFF00,
+                ))
             }
         }
     }
@@ -97,7 +119,7 @@ enum AddressMode {
 
 impl AddressMode {
     pub fn from_code(opcode: u8) -> Result<AddressMode, CoreError> {
-        let mode_code = (opcode >> 2) & 0xF;
+        let mode_code = (opcode >> 2) % 8;
         match mode_code {
             0 => Ok(AddressMode::IndirectX),
             1 => Ok(AddressMode::ZeroPage),

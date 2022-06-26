@@ -43,7 +43,7 @@ fn test_get_address_immediate() {
         .borrow_mut()
         .get_address(AddressMode::Immediate)
         .unwrap();
-    assert_eq!(address, 1u16);
+    assert_eq!(address, (1u16, false));
 }
 
 #[test]
@@ -59,7 +59,7 @@ fn test_get_address_zero_page() {
         .unwrap();
 
     let address = cpu.borrow_mut().get_address(AddressMode::ZeroPage).unwrap();
-    assert_eq!(address, 0x88u16);
+    assert_eq!(address, (0x88u16, false));
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn test_get_address_zero_page_x() {
         .borrow_mut()
         .get_address(AddressMode::ZeroPageX)
         .unwrap();
-    assert_eq!(address, 0x88u16 + 5u16);
+    assert_eq!(address, (0x88u16 + 5u16, false));
 }
 
 #[test]
@@ -99,7 +99,7 @@ fn test_get_address_zero_page_x_page_cross() {
         .borrow_mut()
         .get_address(AddressMode::ZeroPageX)
         .unwrap();
-    assert_eq!(address, 0u16);
+    assert_eq!(address, (0u16, false));
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn test_get_address_zero_page_y() {
         .borrow_mut()
         .get_address(AddressMode::ZeroPageY)
         .unwrap();
-    assert_eq!(address, 0x88u16 + 5u16);
+    assert_eq!(address, (0x88u16 + 5u16, false));
 }
 
 #[test]
@@ -139,7 +139,7 @@ fn test_get_address_zero_page_y_page_cross() {
         .borrow_mut()
         .get_address(AddressMode::ZeroPageY)
         .unwrap();
-    assert_eq!(address, 0u16);
+    assert_eq!(address, (0u16, false));
 }
 
 #[test]
@@ -155,7 +155,7 @@ fn test_get_address_absolute() {
         .unwrap();
 
     let address = cpu.borrow_mut().get_address(AddressMode::Absolute).unwrap();
-    assert_eq!(address, 0xBBAAu16);
+    assert_eq!(address, (0xBBAAu16, false));
 }
 
 #[test]
@@ -175,7 +175,27 @@ fn test_get_address_absolute_x() {
         .borrow_mut()
         .get_address(AddressMode::AbsoluteX)
         .unwrap();
-    assert_eq!(address, 0xBBAAu16 + 5u16);
+    assert_eq!(address, (0xBBAAu16 + 5u16, false));
+}
+
+#[test]
+fn test_get_address_absolute_x_page_cross() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    cpu.borrow_mut().pc = 0u16;
+    cpu.borrow_mut().x = 0x2u8;
+    cpu.borrow_mut()
+        .bus
+        .borrow_mut()
+        .write_word(1u16, 0xBBFFu16)
+        .unwrap();
+
+    let address = cpu
+        .borrow_mut()
+        .get_address(AddressMode::AbsoluteX)
+        .unwrap();
+    assert_eq!(address, (0xBBFFu16 + 0x2u16, true));
 }
 
 #[test]
@@ -195,7 +215,27 @@ fn test_get_address_absolute_y() {
         .borrow_mut()
         .get_address(AddressMode::AbsoluteY)
         .unwrap();
-    assert_eq!(address, 0xBBAAu16 + 5u16);
+    assert_eq!(address, (0xBBAAu16 + 5u16, false));
+}
+
+#[test]
+fn test_get_address_absolute_y_page_cross() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    cpu.borrow_mut().pc = 0u16;
+    cpu.borrow_mut().y = 0x2u8;
+    cpu.borrow_mut()
+        .bus
+        .borrow_mut()
+        .write_word(1u16, 0xBBFFu16)
+        .unwrap();
+
+    let address = cpu
+        .borrow_mut()
+        .get_address(AddressMode::AbsoluteY)
+        .unwrap();
+    assert_eq!(address, (0xBBFFu16 + 0x2u16, true));
 }
 
 #[test]
@@ -220,7 +260,7 @@ fn test_get_address_indirect_x() {
         .borrow_mut()
         .get_address(AddressMode::IndirectX)
         .unwrap();
-    assert_eq!(address, 0x1234u16);
+    assert_eq!(address, (0x1234u16, false));
 }
 
 #[test]
@@ -250,7 +290,7 @@ fn test_get_address_indirect_x_page_cross() {
         .borrow_mut()
         .get_address(AddressMode::IndirectX)
         .unwrap();
-    assert_eq!(address, 0x1234u16);
+    assert_eq!(address, (0x1234u16, false));
 }
 
 #[test]
@@ -275,5 +315,30 @@ fn test_get_address_indirect_y() {
         .borrow_mut()
         .get_address(AddressMode::IndirectY)
         .unwrap();
-    assert_eq!(address, 0x1234u16 + 5u16);
+    assert_eq!(address, (0x1234u16 + 5u16, false));
+}
+
+#[test]
+fn test_get_address_indirect_y_page_cross() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    cpu.borrow_mut().pc = 0u16;
+    cpu.borrow_mut().y = 0x2u8;
+    cpu.borrow_mut()
+        .bus
+        .borrow_mut()
+        .write_word(0x10u16, 0x12FFu16)
+        .unwrap();
+    cpu.borrow_mut()
+        .bus
+        .borrow_mut()
+        .write_byte(1u16, 0x10u8)
+        .unwrap();
+
+    let address = cpu
+        .borrow_mut()
+        .get_address(AddressMode::IndirectY)
+        .unwrap();
+    assert_eq!(address, (0x12FFu16 + 0x2u16, true));
 }
