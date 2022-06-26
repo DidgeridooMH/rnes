@@ -42,6 +42,7 @@ impl CPU {
             OpcodeGroup::ORA => self.ora(operand),
             OpcodeGroup::AND => self.and(operand),
             OpcodeGroup::EOR => self.eor(operand),
+            OpcodeGroup::ADC => self.adc(operand),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
@@ -63,7 +64,16 @@ impl CPU {
     }
 
     fn eor(&mut self, operand: u8) {
-        self.a = self.a & operand;
+        self.a ^= operand;
         self.set_nz_flags(self.a);
+    }
+
+    fn adc(&mut self, operand: u8) {
+        self.p.set_c(self.a.checked_add(operand) == None);
+        self.p
+            .set_v((self.a as i8).checked_add(operand as i8) == None);
+        self.a = self.a.wrapping_add(operand);
+        self.p.set_z(self.a == 0);
+        self.p.set_n(self.a & 0x80u8 > 0);
     }
 }

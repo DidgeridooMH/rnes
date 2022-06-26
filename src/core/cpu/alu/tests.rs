@@ -396,3 +396,105 @@ fn test_eor_negative() {
     assert_eq!(cpu.p.n(), true);
     assert_eq!(cpu.p.z(), false);
 }
+
+#[test]
+fn test_adc_zero() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 0u8;
+    cpu.adc(0u8);
+
+    assert_eq!(cpu.a, 0u8);
+    assert_eq!(cpu.p.c(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.v(), false);
+}
+
+#[test]
+fn test_adc_positive() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 3u8;
+    cpu.adc(4u8);
+
+    assert_eq!(cpu.a, 7u8);
+    assert_eq!(cpu.p.c(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), false);
+}
+
+#[test]
+fn test_adc_negative() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 0x80u8;
+    cpu.adc(0x1u8);
+
+    assert_eq!(cpu.a, 0x81u8);
+    assert_eq!(cpu.p.c(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), false);
+}
+
+#[test]
+fn test_adc_carry() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 0xFFu8;
+    cpu.adc(0x2u8);
+
+    assert_eq!(cpu.a, 0x1u8);
+    assert_eq!(cpu.p.c(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), false);
+}
+
+#[test]
+fn test_adc_overflow_pton() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 0x7Fu8;
+    cpu.adc(0x01u8);
+
+    assert_eq!(cpu.a, 0x80u8);
+    assert_eq!(cpu.p.c(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), true);
+}
+
+#[test]
+fn test_adc_overflow_ntop() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+
+    cpu.a = 0x81u8;
+    cpu.adc(0x80u8);
+
+    assert_eq!(cpu.a, 0x1u8);
+    assert_eq!(cpu.p.c(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), true);
+}
