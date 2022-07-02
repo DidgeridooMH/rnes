@@ -498,3 +498,61 @@ fn test_adc_overflow_ntop() {
     assert_eq!(cpu.p.z(), false);
     assert_eq!(cpu.p.v(), true);
 }
+
+#[test]
+fn test_sta() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    bus.borrow_mut().write_byte(0x1u16, 0x80u8).unwrap();
+
+    cpu.a = 0x81u8;
+    cpu.pc = 0x0u16;
+    cpu.run_alu_op(0x85u8).unwrap();
+
+    let result = bus.borrow_mut().read_byte(0x80u16).unwrap();
+    assert_eq!(result, 0x81u8);
+}
+
+#[test]
+fn test_lda_zero() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x80u8;
+    cpu.lda(0x00u8);
+
+    assert_eq!(cpu.a, 0x00u8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_lda_positive() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x80u8;
+    cpu.lda(0x40u8);
+
+    assert_eq!(cpu.a, 0x40u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_lda_negative() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x80u8;
+    cpu.lda(0xEFu8);
+
+    assert_eq!(cpu.a, 0xEFu8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}

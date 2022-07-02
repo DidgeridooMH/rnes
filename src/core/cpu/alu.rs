@@ -43,6 +43,11 @@ impl CPU {
             OpcodeGroup::AND => self.and(operand),
             OpcodeGroup::EOR => self.eor(operand),
             OpcodeGroup::ADC => self.adc(operand),
+            OpcodeGroup::STA => match self.bus.borrow_mut().write_byte(address, self.a) {
+                Err(e) => return Err(e),
+                _ => (),
+            },
+            OpcodeGroup::LDA => self.lda(operand),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
@@ -73,7 +78,11 @@ impl CPU {
         self.p
             .set_v((self.a as i8).checked_add(operand as i8) == None);
         self.a = self.a.wrapping_add(operand);
-        self.p.set_z(self.a == 0);
-        self.p.set_n(self.a & 0x80u8 > 0);
+        self.set_nz_flags(self.a);
+    }
+
+    fn lda(&mut self, operand: u8) {
+        self.a = operand;
+        self.set_nz_flags(self.a);
     }
 }
