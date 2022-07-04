@@ -616,3 +616,70 @@ fn test_cmp_negative_no_carry() {
     assert_eq!(cpu.p.n(), true);
     assert_eq!(cpu.p.c(), false);
 }
+
+#[test]
+fn test_sbc_no_flags() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x30u8;
+    cpu.sbc(0x10u8);
+
+    assert_eq!(cpu.a, 0x20u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+    assert_eq!(cpu.p.v(), false);
+}
+
+#[test]
+fn test_sbc_zero() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x10u8;
+    cpu.p.set_c(true);
+    cpu.sbc(0x10u8);
+
+    assert_eq!(cpu.a, 0x00u8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.v(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_sbc_overflow_positive() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x7Fu8;
+    cpu.p.set_c(true);
+    cpu.sbc(0xFFu8);
+
+    assert_eq!(cpu.a, 0x80u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.v(), true);
+    assert_eq!(cpu.p.c(), false);
+}
+
+#[test]
+fn test_sbc_overflow_negative() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0xFEu8;
+    cpu.p.set_c(true);
+    cpu.sbc(0x7Fu8);
+
+    assert_eq!(cpu.a, 0x7Fu8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.v(), true);
+    assert_eq!(cpu.p.c(), false);
+}
