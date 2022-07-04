@@ -1,4 +1,5 @@
 mod alu;
+mod control;
 mod memory;
 mod status;
 #[cfg(test)]
@@ -14,7 +15,6 @@ enum Interrupt {
 
 pub struct CPU {
     bus: Rc<RefCell<Bus>>,
-    internal_ram: Rc<RefCell<InternalRam>>,
     pub a: u8,
     x: u8,
     y: u8,
@@ -28,7 +28,6 @@ impl CPU {
     pub fn new(bus: &Rc<RefCell<Bus>>) -> Rc<RefCell<Self>> {
         let cpu = Rc::new(RefCell::new(Self {
             bus: bus.clone(),
-            internal_ram: InternalRam::new(),
             a: 0,
             x: 0,
             y: 0,
@@ -38,7 +37,7 @@ impl CPU {
             interrupt: Some(Interrupt::Reset),
         }));
         bus.borrow_mut()
-            .register_region(0x0u16..=0x2000u16, cpu.borrow().internal_ram.clone());
+            .register_region(0x0u16..=0x2000u16, InternalRam::new());
         cpu
     }
 
@@ -51,10 +50,9 @@ impl CPU {
             _ => {}
         }
 
-        // TODO: Untested.
         let opcode = self.bus.borrow().read_byte(self.pc)?;
         let cycles = match opcode % 4 {
-            0 => todo!("control instructions need to be implemented"),
+            0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
             2 => todo!("RMW operations need to be implemented"),
             3 => todo!("unofficial operations need implemented"),
@@ -115,6 +113,18 @@ impl CPU {
                 ))
             }
         }
+    }
+
+    fn push_byte(&mut self, data: u8) -> Result<(), CoreError> {
+        self.bus.borrow_mut().write_byte(self.sp as u16, data)?;
+        self.sp -= 1;
+        Ok(())
+    }
+
+    fn push_word(&mut self, data: u16) -> Result<(), CoreError> {
+        self.push_byte((data >> 8) as u8)?;
+        self.push_byte(data as u8)?;
+        Ok(())
     }
 }
 

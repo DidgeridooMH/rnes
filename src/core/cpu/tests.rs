@@ -342,3 +342,29 @@ fn test_get_address_indirect_y_page_cross() {
         .unwrap();
     assert_eq!(address, (0x12FFu16 + 0x2u16, true));
 }
+
+#[test]
+fn test_push_byte() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    cpu.borrow_mut().sp = 0xFFu8;
+    cpu.borrow_mut().push_byte(0x80u8).unwrap();
+
+    let result = bus.borrow_mut().read_byte(0xFF).unwrap();
+    assert_eq!(cpu.borrow_mut().sp, 0xFEu8);
+    assert_eq!(result, 0x80u8);
+}
+
+#[test]
+fn test_push_word() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    cpu.borrow_mut().sp = 0xFFu8;
+    cpu.borrow_mut().push_word(0xBEEFu16).unwrap();
+
+    let result = bus.borrow().read_word(0xFEu16).unwrap();
+    assert_eq!(cpu.borrow().sp, 0xFDu8);
+    assert_eq!(result, 0xBEEFu16);
+}
