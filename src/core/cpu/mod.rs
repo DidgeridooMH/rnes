@@ -8,15 +8,20 @@ use self::{memory::InternalRam, status::StatusRegister};
 use super::{Addressable, Bus, CoreError};
 use std::{cell::RefCell, rc::Rc};
 
+enum Interrupt {
+    Reset,
+}
+
 pub struct CPU {
     bus: Rc<RefCell<Bus>>,
     internal_ram: Rc<RefCell<InternalRam>>,
-    a: u8,
+    pub a: u8,
     x: u8,
     y: u8,
     sp: u8,
     pc: u16,
-    p: StatusRegister,
+    pub p: StatusRegister,
+    interrupt: Option<Interrupt>,
 }
 
 impl CPU {
@@ -30,13 +35,22 @@ impl CPU {
             sp: 0xFFu8,
             pc: 0xFFFCu16,
             p: StatusRegister(0),
+            interrupt: Some(Interrupt::Reset),
         }));
         bus.borrow_mut()
-            .register_region(0x0u16..0x2000u16, cpu.borrow().internal_ram.clone());
+            .register_region(0x0u16..=0x2000u16, cpu.borrow().internal_ram.clone());
         cpu
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
+        match self.interrupt {
+            Some(Interrupt::Reset) => {
+                self.pc = self.bus.borrow().read_word(0xFFFCu16)?;
+                self.interrupt = None
+            }
+            _ => {}
+        }
+
         // TODO: Untested.
         let opcode = self.bus.borrow().read_byte(self.pc)?;
         let cycles = match opcode % 4 {
@@ -144,6 +158,18 @@ impl AddressMode {
             | AddressMode::AbsoluteY => 3,
             AddressMode::IndirectX => 6,
             AddressMode::IndirectY => 5,
+        }
+    }
+
+    pub fn byte_code_size(&self) -> u16 {
+        match &self {
+            AddressMode::Immediate
+            | AddressMode::ZeroPage
+            | AddressMode::ZeroPageX
+            | AddressMode::ZeroPageY
+            | AddressMode::IndirectX
+            | AddressMode::IndirectY => 1,
+            AddressMode::Absolute | AddressMode::AbsoluteX | AddressMode::AbsoluteY => 2,
         }
     }
 }

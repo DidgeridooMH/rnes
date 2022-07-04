@@ -49,13 +49,15 @@ impl CPU {
             },
             OpcodeGroup::LDA => self.lda(operand),
             OpcodeGroup::CMP => self.cmp(operand),
-            _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
+            OpcodeGroup::SBC => self.sbc(operand),
         };
 
         let mut cycles = 1 + address_mode.cycle_cost();
         if page_cross || (opcode_group == OpcodeGroup::STA) {
             cycles += 1;
         }
+
+        self.pc += 1 + address_mode.byte_code_size();
         Ok(cycles)
     }
 
@@ -75,9 +77,9 @@ impl CPU {
     }
 
     fn adc(&mut self, operand: u8) {
-        self.p.set_c(self.a.checked_add(operand) == None);
+        self.p.set_c(self.a.checked_add(operand).is_none());
         self.p
-            .set_v((self.a as i8).checked_add(operand as i8) == None);
+            .set_v((self.a as i8).checked_add(operand as i8).is_none());
         self.a = self.a.wrapping_add(operand);
         self.set_nz_flags(self.a);
     }
@@ -91,5 +93,16 @@ impl CPU {
         let result = self.a.wrapping_sub(operand);
         self.p.set_c(self.a >= operand);
         self.set_nz_flags(result);
+    }
+
+    fn sbc(&mut self, operand: u8) {
+        self.p
+            .set_v(match (self.a as i8).checked_sub(operand as i8) {
+                Some(r) => r.checked_sub(1 - self.p.c() as i8).is_none(),
+                None => true,
+            });
+        self.a = self.a.wrapping_sub(operand);
+        self.set_nz_flags(self.a);
+        self.p.set_c(!self.p.v());
     }
 }
