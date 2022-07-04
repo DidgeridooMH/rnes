@@ -556,3 +556,63 @@ fn test_lda_negative() {
     assert_eq!(cpu.p.z(), false);
     assert_eq!(cpu.p.n(), true);
 }
+
+#[test]
+fn test_cmp_zero() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x20u8;
+    cpu.cmp(0x20u8);
+
+    assert_eq!(cpu.a, 0x20u8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cmp_negative() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0xE0u8;
+    cpu.cmp(0x10u8);
+
+    assert_eq!(cpu.a, 0xE0u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cmp_carry() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x30u8;
+    cpu.cmp(0x20u8);
+
+    assert_eq!(cpu.a, 0x30u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cmp_negative_no_carry() {
+    let bus = Bus::new();
+    let cpu = CPU::new(&bus);
+
+    let mut cpu = cpu.borrow_mut();
+    cpu.a = 0x20u8;
+    cpu.cmp(0x30u8);
+
+    assert_eq!(cpu.a, 0x20u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.c(), false);
+}

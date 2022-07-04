@@ -48,6 +48,7 @@ impl CPU {
                 _ => (),
             },
             OpcodeGroup::LDA => self.lda(operand),
+            OpcodeGroup::CMP => self.cmp(operand),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
@@ -84,5 +85,11 @@ impl CPU {
     fn lda(&mut self, operand: u8) {
         self.a = operand;
         self.set_nz_flags(self.a);
+    }
+
+    fn cmp(&mut self, operand: u8) {
+        let result = self.a.wrapping_sub(operand);
+        self.p.set_c(self.a >= operand);
+        self.set_nz_flags(result);
     }
 }
