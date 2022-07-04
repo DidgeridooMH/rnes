@@ -49,13 +49,15 @@ impl CPU {
             },
             OpcodeGroup::LDA => self.lda(operand),
             OpcodeGroup::CMP => self.cmp(operand),
-            _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
+            OpcodeGroup::SBC => self.sbc(operand),
         };
 
         let mut cycles = 1 + address_mode.cycle_cost();
         if page_cross || (opcode_group == OpcodeGroup::STA) {
             cycles += 1;
         }
+
+        self.pc += 1 + address_mode.byte_code_size();
         Ok(cycles)
     }
 

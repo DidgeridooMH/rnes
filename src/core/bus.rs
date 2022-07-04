@@ -1,6 +1,6 @@
 use super::CoreError;
 use std::cell::RefCell;
-use std::ops::Range;
+use std::ops::RangeInclusive;
 use std::rc::Rc;
 
 #[cfg(test)]
@@ -11,10 +11,8 @@ pub trait Addressable {
     fn write_byte(&mut self, address: u16, data: u8);
 }
 
-pub type AddressRegion = Range<u16>;
-
 pub struct MemoryMapping {
-    region: AddressRegion,
+    region: RangeInclusive<u16>,
     component: Rc<RefCell<dyn Addressable>>,
 }
 
@@ -31,7 +29,7 @@ impl Bus {
 
     pub fn register_region(
         &mut self,
-        region: AddressRegion,
+        region: RangeInclusive<u16>,
         component: Rc<RefCell<dyn Addressable>>,
     ) {
         self.regions.push(MemoryMapping { region, component });

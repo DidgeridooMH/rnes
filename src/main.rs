@@ -1,5 +1,4 @@
-mod core;
-use crate::core::{cpu, Bus};
+use rnes::core::{cpu, Bus};
 
 fn main() {
     let bus = Bus::new();
