@@ -25,16 +25,16 @@ fn test_cpu_alu() {
     ];
 
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
     let test_cart = Rc::new(RefCell::new(TestCartridge { program }));
 
     bus.borrow_mut()
         .register_region(0x8000u16..=0xFFFFu16, test_cart);
 
     for _ in 0..8 {
-        cpu.borrow_mut().tick().unwrap();
+        cpu.tick().unwrap();
     }
 
-    assert_eq!(cpu.borrow().a, 0x10);
-    assert_eq!(cpu.borrow().p.c(), true);
+    assert_eq!(cpu.a, 0x10);
+    assert_eq!(cpu.p.c(), true);
 }

@@ -4,9 +4,8 @@ use crate::core::Bus;
 #[test]
 fn test_ora_immediate() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     bus.borrow_mut().write_byte(0x1u16, 0x80u8).unwrap();
     cpu.a = 1u8;
     cpu.pc = 0u16;
@@ -20,9 +19,8 @@ fn test_ora_immediate() {
 #[test]
 fn test_ora_zero_flag() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.pc = 0u16;
     cpu.run_alu_op(0x09u8).unwrap();
 
@@ -34,9 +32,8 @@ fn test_ora_zero_flag() {
 #[test]
 fn test_ora_zero_page() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
@@ -54,9 +51,8 @@ fn test_ora_zero_page() {
 #[test]
 fn test_ora_zero_page_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
@@ -75,9 +71,8 @@ fn test_ora_zero_page_x() {
 #[test]
 fn test_ora_absolute() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -95,9 +90,8 @@ fn test_ora_absolute() {
 #[test]
 fn test_ora_absolute_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -116,9 +110,8 @@ fn test_ora_absolute_x() {
 #[test]
 fn test_ora_absolute_y() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -137,9 +130,8 @@ fn test_ora_absolute_y() {
 #[test]
 fn test_ora_indirect_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
@@ -159,9 +151,8 @@ fn test_ora_indirect_x() {
 #[test]
 fn test_ora_indirect_y() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
@@ -181,9 +172,8 @@ fn test_ora_indirect_y() {
 #[test]
 fn test_and_immediate() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     bus.borrow_mut().write_byte(0x1u16, 0xC0u8).unwrap();
     cpu.a = 0x81u8;
     cpu.pc = 0u16;
@@ -197,9 +187,8 @@ fn test_and_immediate() {
 #[test]
 fn test_and_zero_flag() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.pc = 0u16;
     cpu.run_alu_op(0x29u8).unwrap();
 
@@ -211,9 +200,8 @@ fn test_and_zero_flag() {
 #[test]
 fn test_and_zero_page() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
@@ -231,9 +219,8 @@ fn test_and_zero_page() {
 #[test]
 fn test_and_zero_page_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
@@ -252,9 +239,8 @@ fn test_and_zero_page_x() {
 #[test]
 fn test_and_absolute() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -272,9 +258,8 @@ fn test_and_absolute() {
 #[test]
 fn test_and_absolute_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -293,9 +278,8 @@ fn test_and_absolute_x() {
 #[test]
 fn test_and_absolute_y() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
@@ -314,9 +298,8 @@ fn test_and_absolute_y() {
 #[test]
 fn test_and_indirect_x() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
@@ -336,9 +319,8 @@ fn test_and_indirect_x() {
 #[test]
 fn test_and_indirect_y() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
@@ -358,9 +340,8 @@ fn test_and_indirect_y() {
 #[test]
 fn test_eor_zero() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x80u8;
     cpu.eor(0x80u8);
 
@@ -372,9 +353,8 @@ fn test_eor_zero() {
 #[test]
 fn test_eor_positive() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x1u8;
     cpu.eor(0x2u8);
 
@@ -386,9 +366,8 @@ fn test_eor_positive() {
 #[test]
 fn test_eor_negative() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x80u8;
     cpu.eor(0u8);
 
@@ -400,9 +379,7 @@ fn test_eor_negative() {
 #[test]
 fn test_adc_zero() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 0u8;
     cpu.adc(0u8);
@@ -417,9 +394,7 @@ fn test_adc_zero() {
 #[test]
 fn test_adc_positive() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 3u8;
     cpu.adc(4u8);
@@ -434,9 +409,7 @@ fn test_adc_positive() {
 #[test]
 fn test_adc_negative() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 0x80u8;
     cpu.adc(0x1u8);
@@ -451,9 +424,7 @@ fn test_adc_negative() {
 #[test]
 fn test_adc_carry() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 0xFFu8;
     cpu.adc(0x2u8);
@@ -468,9 +439,7 @@ fn test_adc_carry() {
 #[test]
 fn test_adc_overflow_pton() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 0x7Fu8;
     cpu.adc(0x01u8);
@@ -485,9 +454,7 @@ fn test_adc_overflow_pton() {
 #[test]
 fn test_adc_overflow_ntop() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
-
-    let mut cpu = cpu.borrow_mut();
+    let mut cpu = CPU::new(&bus);
 
     cpu.a = 0x81u8;
     cpu.adc(0x80u8);
@@ -502,9 +469,8 @@ fn test_adc_overflow_ntop() {
 #[test]
 fn test_sta() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     bus.borrow_mut().write_byte(0x1u16, 0x80u8).unwrap();
 
     cpu.a = 0x81u8;
@@ -518,9 +484,8 @@ fn test_sta() {
 #[test]
 fn test_lda_zero() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x80u8;
     cpu.lda(0x00u8);
 
@@ -532,9 +497,8 @@ fn test_lda_zero() {
 #[test]
 fn test_lda_positive() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x80u8;
     cpu.lda(0x40u8);
 
@@ -546,9 +510,8 @@ fn test_lda_positive() {
 #[test]
 fn test_lda_negative() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x80u8;
     cpu.lda(0xEFu8);
 
@@ -560,9 +523,8 @@ fn test_lda_negative() {
 #[test]
 fn test_cmp_zero() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x20u8;
     cpu.cmp(0x20u8);
 
@@ -575,9 +537,8 @@ fn test_cmp_zero() {
 #[test]
 fn test_cmp_negative() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0xE0u8;
     cpu.cmp(0x10u8);
 
@@ -590,9 +551,8 @@ fn test_cmp_negative() {
 #[test]
 fn test_cmp_carry() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x30u8;
     cpu.cmp(0x20u8);
 
@@ -605,9 +565,8 @@ fn test_cmp_carry() {
 #[test]
 fn test_cmp_negative_no_carry() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x20u8;
     cpu.cmp(0x30u8);
 
@@ -620,9 +579,8 @@ fn test_cmp_negative_no_carry() {
 #[test]
 fn test_sbc_no_flags() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x30u8;
     cpu.sbc(0x10u8);
 
@@ -636,9 +594,8 @@ fn test_sbc_no_flags() {
 #[test]
 fn test_sbc_zero() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x10u8;
     cpu.p.set_c(true);
     cpu.sbc(0x10u8);
@@ -653,9 +610,8 @@ fn test_sbc_zero() {
 #[test]
 fn test_sbc_overflow_positive() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0x7Fu8;
     cpu.p.set_c(true);
     cpu.sbc(0xFFu8);
@@ -670,9 +626,8 @@ fn test_sbc_overflow_positive() {
 #[test]
 fn test_sbc_overflow_negative() {
     let bus = Bus::new();
-    let cpu = CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
-    let mut cpu = cpu.borrow_mut();
     cpu.a = 0xFEu8;
     cpu.p.set_c(true);
     cpu.sbc(0x7Fu8);

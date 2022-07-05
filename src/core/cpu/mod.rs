@@ -25,8 +25,10 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(bus: &Rc<RefCell<Bus>>) -> Rc<RefCell<Self>> {
-        let cpu = Rc::new(RefCell::new(Self {
+    pub fn new(bus: &Rc<RefCell<Bus>>) -> Self {
+        bus.borrow_mut()
+            .register_region(0x0u16..=0x2000u16, InternalRam::new());
+        Self {
             bus: bus.clone(),
             a: 0,
             x: 0,
@@ -35,10 +37,7 @@ impl CPU {
             pc: 0xFFFCu16,
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
-        }));
-        bus.borrow_mut()
-            .register_region(0x0u16..=0x2000u16, InternalRam::new());
-        cpu
+        }
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
@@ -119,6 +118,11 @@ impl CPU {
         self.bus.borrow_mut().write_byte(self.sp as u16, data)?;
         self.sp -= 1;
         Ok(())
+    }
+
+    fn pop_byte(&mut self) -> Result<u8, CoreError> {
+        self.sp += 1;
+        self.bus.borrow_mut().read_byte(self.sp as u16)
     }
 
     fn push_word(&mut self, data: u16) -> Result<(), CoreError> {
