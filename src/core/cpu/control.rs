@@ -13,6 +13,7 @@ impl CPU {
             0x28 => self.plp()?,
             0x48 => self.pha()?,
             0x68 => self.pla()?,
+            o if o & 0x1F == 0x10 => self.branch(o)?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -57,5 +58,33 @@ impl CPU {
         self.a = self.pop_byte()?;
         self.set_nz_flags(self.a);
         Ok((1, 4))
+    }
+
+    fn branch(&mut self, opcode: u8) -> OpcodeResult {
+        let mut should_branch = match opcode >> 6 {
+            0 => self.p.n(),
+            1 => self.p.v(),
+            2 => self.p.c(),
+            3 => self.p.z(),
+            _ => unreachable!(),
+        };
+
+        if opcode & 0x20 == 0 {
+            should_branch = !should_branch;
+        }
+
+        if should_branch {
+            let prev_pc = self.pc;
+            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as i8;
+            self.pc = (self.pc as i16 + offset as i16) as u16;
+
+            if (prev_pc >> 8) != (self.pc >> 8) {
+                Ok((0, 5))
+            } else {
+                Ok((0, 3))
+            }
+        } else {
+            Ok((2, 2))
+        }
     }
 }

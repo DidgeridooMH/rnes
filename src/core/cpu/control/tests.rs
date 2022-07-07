@@ -119,3 +119,245 @@ fn test_pla_negative() {
     assert!(!cpu.p.z());
     assert!(cpu.p.n());
 }
+
+#[test]
+fn test_bpl_take_branch_change_page() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0xFFu16, 0x3u8).unwrap();
+    cpu.pc = 0xFE;
+
+    let (_, cycles) = cpu.branch(0x10u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x101u16);
+    assert_eq!(cycles, 5);
+}
+
+#[test]
+fn test_bpl_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0x10u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bpl_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_n(true);
+
+    let (_, cycles) = cpu.branch(0x10u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+#[test]
+fn test_bmi_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_n(true);
+
+    let (_, cycles) = cpu.branch(0x30u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bmi_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0x30u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+
+#[test]
+fn test_bvc_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0x50u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bvc_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_v(true);
+
+    let (_, cycles) = cpu.branch(0x50u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+#[test]
+fn test_bvs_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_v(true);
+
+    let (_, cycles) = cpu.branch(0x70u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bvs_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0x70u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+
+#[test]
+fn test_bcc_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0x90u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bcc_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_c(true);
+
+    let (_, cycles) = cpu.branch(0x90u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+#[test]
+fn test_bcs_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_c(true);
+
+    let (_, cycles) = cpu.branch(0xB0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bcs_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0xB0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+
+#[test]
+fn test_bne_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0xD0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_bne_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_z(true);
+
+    let (_, cycles) = cpu.branch(0xD0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
+#[test]
+fn test_beq_take_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+    cpu.p.set_z(true);
+
+    let (_, cycles) = cpu.branch(0xF0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cycles, 3);
+}
+
+#[test]
+fn test_beq_miss_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x1u16, 0x3u8).unwrap();
+    cpu.pc = 0x0;
+
+    let (_, cycles) = cpu.branch(0xF0u8).unwrap();
+
+    assert_eq!(cpu.pc, 0x0u16);
+    assert_eq!(cycles, 2);
+}
