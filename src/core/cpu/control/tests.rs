@@ -361,3 +361,17 @@ fn test_beq_miss_branch() {
     assert_eq!(cpu.pc, 0x0u16);
     assert_eq!(cycles, 2);
 }
+
+#[test]
+fn test_negative_branch() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_byte(0x11u16, 0xFEu8).unwrap();
+    cpu.pc = 0x10;
+
+    let (_, cycles) = cpu.branch(0x10u8).unwrap();
+
+    assert_eq!(cpu.pc, 0xEu16);
+    assert_eq!(cycles, 3);
+}
