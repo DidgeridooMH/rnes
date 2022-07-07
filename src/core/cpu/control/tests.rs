@@ -375,3 +375,20 @@ fn test_negative_branch() {
     assert_eq!(cpu.pc, 0xEu16);
     assert_eq!(cycles, 3);
 }
+
+#[test]
+fn test_jsr() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    bus.borrow_mut().write_word(0x9u16, 0xDEADu16).unwrap();
+    cpu.pc = 8u16;
+    cpu.sp = 0xFFu8;
+
+    cpu.jsr().unwrap();
+
+    let result = bus.borrow().read_word(0xFEu16).unwrap();
+    assert_eq!(result, 10u16);
+    assert_eq!(cpu.sp, 0xFDu8);
+    assert_eq!(cpu.pc, 0xDEADu16);
+}

@@ -14,6 +14,35 @@ impl CPU {
             0x48 => self.pha()?,
             0x68 => self.pla()?,
             o if o & 0x1F == 0x10 => self.branch(o)?,
+            0x18 => {
+                self.p.set_c(false);
+                (1, 2)
+            }
+            0x38 => {
+                self.p.set_c(true);
+                (1, 2)
+            }
+            0x58 => {
+                self.p.set_i(false);
+                (1, 2)
+            }
+            0x78 => {
+                self.p.set_i(true);
+                (1, 2)
+            }
+            0xB8 => {
+                self.p.set_v(false);
+                (1, 2)
+            }
+            0xD8 => {
+                self.p.set_d(false);
+                (1, 2)
+            }
+            0xF8 => {
+                self.p.set_d(true);
+                (1, 2)
+            }
+            0x20 => self.jsr()?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -86,5 +115,12 @@ impl CPU {
         } else {
             Ok((2, 2))
         }
+    }
+
+    fn jsr(&mut self) -> OpcodeResult {
+        // PC + 3'size of ins' - 1'RTS has size 1'
+        self.push_word(self.pc + 2)?;
+        self.pc = self.bus.borrow_mut().read_word(self.pc + 1)?;
+        Ok((0, 6))
     }
 }
