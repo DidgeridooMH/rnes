@@ -43,6 +43,7 @@ impl CPU {
                 (1, 2)
             }
             0x20 => self.jsr()?,
+            0x24 | 0x2C => self.bit(opcode)?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
