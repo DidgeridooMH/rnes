@@ -392,3 +392,87 @@ fn test_jsr() {
     assert_eq!(cpu.sp, 0xFDu8);
     assert_eq!(cpu.pc, 0xDEADu16);
 }
+
+#[test]
+fn test_bit_zero_page() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(0x80u16, 0x80u8).unwrap();
+        bus.write_byte(0x1u16, 0x80u8).unwrap();
+    }
+
+    cpu.pc = 0x0u16;
+    cpu.a = 0x81u8;
+    cpu.bit(0x24u8).unwrap();
+
+    assert_eq!(cpu.a, 0x81u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), false);
+    assert_eq!(cpu.p.n(), true);
+}
+
+#[test]
+fn test_bit_absolute() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_word(0x1u16, 0x715u16).unwrap();
+        bus.write_byte(0x715u16, 0x80u8).unwrap();
+    }
+
+    cpu.pc = 0x0u16;
+    cpu.a = 0x81u8;
+    cpu.bit(0x2Cu8).unwrap();
+
+    assert_eq!(cpu.a, 0x81u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), false);
+    assert_eq!(cpu.p.n(), true);
+}
+
+#[test]
+fn test_bit_zero() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_word(0x1u16, 0x715u16).unwrap();
+        bus.write_byte(0x715u16, 0x80u8).unwrap();
+    }
+
+    cpu.pc = 0x0u16;
+    cpu.a = 0x1u8;
+    cpu.bit(0x2Cu8).unwrap();
+
+    assert_eq!(cpu.a, 0x1u8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.v(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_bit_overflow() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_word(0x1u16, 0x715u16).unwrap();
+        bus.write_byte(0x715u16, 0x40u8).unwrap();
+    }
+
+    cpu.pc = 0x0u16;
+    cpu.a = 0x41u8;
+    cpu.bit(0x2Cu8).unwrap();
+
+    assert_eq!(cpu.a, 0x41u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.v(), true);
+    assert_eq!(cpu.p.n(), false);
+}

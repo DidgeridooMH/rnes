@@ -1,4 +1,4 @@
-use super::{CoreError, StatusRegister, CPU};
+use super::{AddressMode, CoreError, StatusRegister, CPU};
 
 #[cfg(test)]
 mod tests;
@@ -122,5 +122,17 @@ impl CPU {
         self.push_word(self.pc + 2)?;
         self.pc = self.bus.borrow_mut().read_word(self.pc + 1)?;
         Ok((0, 6))
+    }
+
+    fn bit(&mut self, opcode: u8) -> OpcodeResult {
+        let addr_mode = AddressMode::from_code(opcode)?;
+        let (address, _) = self.get_address(addr_mode)?;
+        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let result = self.a & operand;
+
+        self.set_nz_flags(result);
+        self.p.set_v(result & 0x40u8 > 0);
+
+        Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 1))
     }
 }
