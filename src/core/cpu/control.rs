@@ -44,6 +44,7 @@ impl CPU {
             }
             0x20 => self.jsr()?,
             0x24 | 0x2C => self.bit(opcode)?,
+            0x40 => self.rti()?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -135,5 +136,12 @@ impl CPU {
         self.p.set_v(result & 0x40u8 > 0);
 
         Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 1))
+    }
+
+    fn rti(&mut self) -> OpcodeResult {
+        self.p.0 = self.pop_byte()?;
+        self.p.set_b(0);
+        self.pc = self.pop_word()?;
+        Ok((1, 6))
     }
 }

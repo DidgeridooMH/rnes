@@ -130,6 +130,12 @@ impl CPU {
         self.push_byte(data as u8)?;
         Ok(())
     }
+
+    fn pop_word(&mut self) -> Result<u16, CoreError> {
+        let mut result = self.pop_byte()? as u16;
+        result |= (self.pop_byte()? as u16) << 8;
+        Ok(result)
+    }
 }
 
 #[derive(Copy, Clone)]

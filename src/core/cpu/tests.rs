@@ -266,3 +266,16 @@ fn test_pop_byte() {
     assert_eq!(result, 0x8Eu8);
     assert_eq!(cpu.sp, 0xFFu8);
 }
+
+#[test]
+fn test_pop_word() {
+    let bus = Bus::new();
+    let mut cpu = CPU::new(&bus);
+
+    cpu.sp = 0xFFu8;
+    cpu.push_word(0xBEEFu16).unwrap();
+
+    let result = cpu.pop_word().unwrap();
+    assert_eq!(result, 0xBEEFu16);
+    assert_eq!(cpu.sp, 0xFFu8);
+}
