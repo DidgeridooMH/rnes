@@ -599,3 +599,42 @@ fn test_dey_negative() {
     assert_eq!(cpu.p.z(), false);
     assert_eq!(cpu.p.n(), true);
 }
+
+#[test]
+fn test_tya_zero() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0;
+    cpu.a = 5;
+    cpu.tya().unwrap();
+
+    assert_eq!(cpu.a, 0);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_tya_positive() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 8;
+    cpu.a = 0;
+    cpu.tya().unwrap();
+
+    assert_eq!(cpu.a, 8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_tya_negative() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0x81u8;
+    cpu.a = 0;
+    cpu.tya().unwrap();
+
+    assert_eq!(cpu.a, 0x81u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}
