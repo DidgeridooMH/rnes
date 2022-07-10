@@ -638,3 +638,14 @@ fn test_tya_negative() {
     assert_eq!(cpu.p.z(), false);
     assert_eq!(cpu.p.n(), true);
 }
+
+#[test]
+fn test_ldy() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1u16, 0xABu8).unwrap();
+    cpu.pc = 0;
+    cpu.ldy(0xA0).unwrap();
+
+    assert_eq!(cpu.y, 0xABu8);
+}

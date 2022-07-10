@@ -50,6 +50,7 @@ impl CPU {
             0x84 | 0x94 | 0x8C => self.sty(opcode)?,
             0x88 => self.dey()?,
             0x98 => self.tya()?,
+            0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => self.ldy(opcode)?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -163,7 +164,6 @@ impl CPU {
         };
 
         let (address, _) = self.get_address(addr_mode)?;
-        println!("{}", address);
         self.pc = address;
 
         // Don't increment the PC so that jmps go direct.
@@ -189,5 +189,23 @@ impl CPU {
         self.a = self.y;
         self.set_nz_flags(self.a);
         Ok((1, 2))
+    }
+
+    fn ldy(&mut self, opcode: u8) -> OpcodeResult {
+        let addr_mode = match opcode {
+            0xA0 => AddressMode::Immediate,
+            _ => AddressMode::from_code(opcode)?,
+        };
+        let (address, page_cross) = self.get_address(addr_mode)?;
+        println!("{}", address);
+
+        self.y = self.bus.borrow_mut().read_byte(address)?;
+        self.set_nz_flags(self.y);
+
+        let mut cycles = addr_mode.cycle_cost() + 1;
+        if page_cross {
+            cycles += 1;
+        }
+        Ok((addr_mode.byte_code_size() + 1, cycles))
     }
 }
