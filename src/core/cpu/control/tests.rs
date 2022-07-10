@@ -820,3 +820,39 @@ fn test_iny_negative() {
     assert_eq!(cpu.p.z(), false);
     assert_eq!(cpu.p.n(), true);
 }
+
+#[test]
+fn test_inx_zero() {
+    let (_, mut cpu) = setup();
+
+    cpu.x = 0xFF;
+    cpu.inx().unwrap();
+
+    assert_eq!(cpu.x, 0);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_inx_positive() {
+    let (_, mut cpu) = setup();
+
+    cpu.x = 8;
+    cpu.inx().unwrap();
+
+    assert_eq!(cpu.x, 9);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_inx_negative() {
+    let (_, mut cpu) = setup();
+
+    cpu.x = 0x81u8;
+    cpu.inx().unwrap();
+
+    assert_eq!(cpu.x, 0x82u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}

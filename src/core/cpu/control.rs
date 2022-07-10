@@ -55,6 +55,7 @@ impl CPU {
             0xC0 | 0xC4 | 0xCC => self.cpy(opcode)?,
             0xE0 | 0xE4 | 0xEC => self.cpx(opcode)?,
             0xC8 => self.iny()?,
+            0xE8 => self.inx()?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -259,6 +260,12 @@ impl CPU {
     fn iny(&mut self) -> OpcodeResult {
         self.y = self.y.wrapping_add(1);
         self.set_nz_flags(self.y);
+        Ok((1, 2))
+    }
+
+    fn inx(&mut self) -> OpcodeResult {
+        self.x = self.x.wrapping_add(1);
+        self.set_nz_flags(self.x);
         Ok((1, 2))
     }
 }
