@@ -70,7 +70,7 @@ impl CPU {
         match address_mode {
             AddressMode::Immediate => Ok((self.pc + 1, false)),
             AddressMode::ZeroPage => Ok((
-                self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
+                self.bus.borrow().read_byte(self.pc + 1).unwrap() as u16,
                 false,
             )),
             AddressMode::ZeroPageX => Ok((
@@ -81,7 +81,7 @@ impl CPU {
                 (self.get_address(AddressMode::ZeroPage)?.0 + self.y as u16) % 256,
                 false,
             )),
-            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1)?, false)),
+            AddressMode::Absolute => Ok((self.bus.borrow().read_word(self.pc + 1)?, false)),
             AddressMode::AbsoluteX => {
                 let address = self.get_address(AddressMode::Absolute)?.0;
                 Ok((
@@ -110,6 +110,10 @@ impl CPU {
                     address + self.y as u16,
                     address & 0xFF00 != (address + self.y as u16) & 0xFF00,
                 ))
+            }
+            AddressMode::Indirect => {
+                let address = self.get_address(AddressMode::Absolute)?.0;
+                Ok((self.bus.borrow_mut().read_word_bug(address)?, false))
             }
         }
     }
@@ -147,6 +151,7 @@ enum AddressMode {
     Absolute,
     AbsoluteX,
     AbsoluteY,
+    Indirect,
     IndirectX,
     IndirectY,
 }
@@ -178,6 +183,7 @@ impl AddressMode {
             | AddressMode::AbsoluteY => 3,
             AddressMode::IndirectX => 6,
             AddressMode::IndirectY => 5,
+            AddressMode::Indirect => 4,
         }
     }
 
@@ -189,7 +195,10 @@ impl AddressMode {
             | AddressMode::ZeroPageY
             | AddressMode::IndirectX
             | AddressMode::IndirectY => 1,
-            AddressMode::Absolute | AddressMode::AbsoluteX | AddressMode::AbsoluteY => 2,
+            AddressMode::Absolute
+            | AddressMode::AbsoluteX
+            | AddressMode::AbsoluteY
+            | AddressMode::Indirect => 2,
         }
     }
 }

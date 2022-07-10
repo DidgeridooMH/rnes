@@ -465,3 +465,47 @@ fn test_rti() {
     assert_eq!(cpu.p.0, 0x80u8);
     assert_eq!(cpu.pc, 0x500u16);
 }
+
+#[test]
+fn test_jmp_absolute() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_word(0x1u16, 0xAABBu16).unwrap();
+    cpu.pc = 0;
+    cpu.jmp(0x4Cu8).unwrap();
+
+    assert_eq!(cpu.pc, 0xAABBu16);
+}
+
+#[test]
+fn test_jmp_indirect() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_word(0x1u16, 0x716u16).unwrap();
+        bus.write_word(0x716u16, 0xAABBu16).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.jmp(0x6Cu8).unwrap();
+
+    assert_eq!(cpu.pc, 0xAABBu16);
+}
+
+#[test]
+fn test_jmp_indirect_page_bug() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_word(0x1u16, 0x6FFu16).unwrap();
+        bus.write_byte(0x6FFu16, 0xBBu8).unwrap();
+        bus.write_byte(0x600u16, 0xAAu8).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.jmp(0x6Cu8).unwrap();
+
+    assert_eq!(cpu.pc, 0xAABBu16);
+}
