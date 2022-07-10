@@ -50,6 +50,7 @@ impl CPU {
             0x84 | 0x94 | 0x8C => self.sty(opcode)?,
             0x88 => self.dey()?,
             0x98 => self.tya()?,
+            0xA8 => self.tay()?,
             0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => self.ldy(opcode)?,
             _ => unimplemented!("Rest of control opcodes"),
         };
@@ -188,6 +189,12 @@ impl CPU {
     fn tya(&mut self) -> OpcodeResult {
         self.a = self.y;
         self.set_nz_flags(self.a);
+        Ok((1, 2))
+    }
+
+    fn tay(&mut self) -> OpcodeResult {
+        self.y = self.a;
+        self.set_nz_flags(self.y);
         Ok((1, 2))
     }
 

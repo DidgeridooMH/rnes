@@ -640,6 +640,45 @@ fn test_tya_negative() {
 }
 
 #[test]
+fn test_tay_zero() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 5;
+    cpu.a = 0;
+    cpu.tay().unwrap();
+
+    assert_eq!(cpu.y, 0);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_tay_positive() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0;
+    cpu.a = 8;
+    cpu.tay().unwrap();
+
+    assert_eq!(cpu.y, 8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_tay_negative() {
+    let (_, mut cpu) = setup();
+
+    cpu.a = 0x81u8;
+    cpu.y = 0;
+    cpu.tay().unwrap();
+
+    assert_eq!(cpu.y, 0x81u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}
+
+#[test]
 fn test_ldy() {
     let (bus, mut cpu) = setup();
 
