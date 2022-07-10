@@ -48,6 +48,7 @@ impl CPU {
             0x60 => self.rts()?,
             0x4C | 0x6C => self.jmp(opcode)?,
             0x84 | 0x94 | 0x8C => self.sty(opcode)?,
+            0x88 => self.dey()?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -175,5 +176,11 @@ impl CPU {
         self.bus.borrow_mut().write_byte(address, self.y)?;
 
         Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 2))
+    }
+
+    fn dey(&mut self) -> OpcodeResult {
+        self.y -= 1;
+        self.set_nz_flags(self.y);
+        Ok((1, 2))
     }
 }

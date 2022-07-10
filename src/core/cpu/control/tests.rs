@@ -563,3 +563,39 @@ fn test_sty_absolute() {
     let result = bus.borrow().read_byte(0x701u16).unwrap();
     assert_eq!(result, 0xABu8);
 }
+
+#[test]
+fn test_dey_zero() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 1;
+    cpu.dey().unwrap();
+
+    assert_eq!(cpu.y, 0);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_dey_positive() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 8;
+    cpu.dey().unwrap();
+
+    assert_eq!(cpu.y, 7);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_dey_negative() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0x81u8;
+    cpu.dey().unwrap();
+
+    assert_eq!(cpu.y, 0x80u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}
