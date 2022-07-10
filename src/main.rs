@@ -1,11 +1,11 @@
-use rnes::core::{cpu, Bus};
+use rnes::core::{cpu::CPU, Bus};
 
 fn main() {
     let bus = Bus::new();
-    let cpu = cpu::CPU::new(&bus);
+    let mut cpu = CPU::new(&bus);
 
     loop {
-        match cpu.borrow_mut().tick() {
+        match cpu.tick() {
             Ok(_cycle_count) => {}
             Err(e) => eprintln!("{}", e),
         }

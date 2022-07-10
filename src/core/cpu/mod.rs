@@ -1,4 +1,5 @@
 mod alu;
+mod control;
 mod memory;
 mod status;
 #[cfg(test)]
@@ -14,7 +15,6 @@ enum Interrupt {
 
 pub struct CPU {
     bus: Rc<RefCell<Bus>>,
-    internal_ram: Rc<RefCell<InternalRam>>,
     pub a: u8,
     x: u8,
     y: u8,
@@ -25,10 +25,11 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(bus: &Rc<RefCell<Bus>>) -> Rc<RefCell<Self>> {
-        let cpu = Rc::new(RefCell::new(Self {
+    pub fn new(bus: &Rc<RefCell<Bus>>) -> Self {
+        bus.borrow_mut()
+            .register_region(0x0u16..=0x2000u16, InternalRam::new());
+        Self {
             bus: bus.clone(),
-            internal_ram: InternalRam::new(),
             a: 0,
             x: 0,
             y: 0,
@@ -36,10 +37,7 @@ impl CPU {
             pc: 0xFFFCu16,
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
-        }));
-        bus.borrow_mut()
-            .register_region(0x0u16..=0x2000u16, cpu.borrow().internal_ram.clone());
-        cpu
+        }
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
@@ -51,10 +49,9 @@ impl CPU {
             _ => {}
         }
 
-        // TODO: Untested.
         let opcode = self.bus.borrow().read_byte(self.pc)?;
         let cycles = match opcode % 4 {
-            0 => todo!("control instructions need to be implemented"),
+            0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
             2 => todo!("RMW operations need to be implemented"),
             3 => todo!("unofficial operations need implemented"),
@@ -73,7 +70,7 @@ impl CPU {
         match address_mode {
             AddressMode::Immediate => Ok((self.pc + 1, false)),
             AddressMode::ZeroPage => Ok((
-                self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
+                self.bus.borrow().read_byte(self.pc + 1).unwrap() as u16,
                 false,
             )),
             AddressMode::ZeroPageX => Ok((
@@ -84,7 +81,7 @@ impl CPU {
                 (self.get_address(AddressMode::ZeroPage)?.0 + self.y as u16) % 256,
                 false,
             )),
-            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1)?, false)),
+            AddressMode::Absolute => Ok((self.bus.borrow().read_word(self.pc + 1)?, false)),
             AddressMode::AbsoluteX => {
                 let address = self.get_address(AddressMode::Absolute)?.0;
                 Ok((
@@ -114,7 +111,34 @@ impl CPU {
                     address & 0xFF00 != (address + self.y as u16) & 0xFF00,
                 ))
             }
+            AddressMode::Indirect => {
+                let address = self.get_address(AddressMode::Absolute)?.0;
+                Ok((self.bus.borrow_mut().read_word_bug(address)?, false))
+            }
         }
+    }
+
+    fn push_byte(&mut self, data: u8) -> Result<(), CoreError> {
+        self.bus.borrow_mut().write_byte(self.sp as u16, data)?;
+        self.sp -= 1;
+        Ok(())
+    }
+
+    fn pop_byte(&mut self) -> Result<u8, CoreError> {
+        self.sp += 1;
+        self.bus.borrow_mut().read_byte(self.sp as u16)
+    }
+
+    fn push_word(&mut self, data: u16) -> Result<(), CoreError> {
+        self.push_byte((data >> 8) as u8)?;
+        self.push_byte(data as u8)?;
+        Ok(())
+    }
+
+    fn pop_word(&mut self) -> Result<u16, CoreError> {
+        let mut result = self.pop_byte()? as u16;
+        result |= (self.pop_byte()? as u16) << 8;
+        Ok(result)
     }
 }
 
@@ -127,6 +151,7 @@ enum AddressMode {
     Absolute,
     AbsoluteX,
     AbsoluteY,
+    Indirect,
     IndirectX,
     IndirectY,
 }
@@ -158,6 +183,7 @@ impl AddressMode {
             | AddressMode::AbsoluteY => 3,
             AddressMode::IndirectX => 6,
             AddressMode::IndirectY => 5,
+            AddressMode::Indirect => 4,
         }
     }
 
@@ -169,7 +195,10 @@ impl AddressMode {
             | AddressMode::ZeroPageY
             | AddressMode::IndirectX
             | AddressMode::IndirectY => 1,
-            AddressMode::Absolute | AddressMode::AbsoluteX | AddressMode::AbsoluteY => 2,
+            AddressMode::Absolute
+            | AddressMode::AbsoluteX
+            | AddressMode::AbsoluteY
+            | AddressMode::Indirect => 2,
         }
     }
 }

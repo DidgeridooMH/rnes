@@ -1,6 +1,7 @@
 use bitfield::bitfield;
 
 bitfield! {
+    #[derive(Copy, Clone)]
     pub struct StatusRegister(u8);
     impl Debug;
     #[inline]
