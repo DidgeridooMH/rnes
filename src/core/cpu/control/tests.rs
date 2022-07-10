@@ -688,3 +688,135 @@ fn test_ldy() {
 
     assert_eq!(cpu.y, 0xABu8);
 }
+
+#[test]
+fn test_cpy_zero() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 8).unwrap();
+
+    cpu.pc = 0;
+    cpu.y = 8;
+    cpu.cpy(0xC0).unwrap();
+
+    assert_eq!(cpu.y, 8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cpy_carry() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 8).unwrap();
+
+    cpu.pc = 0;
+    cpu.y = 9;
+    cpu.cpy(0xC0).unwrap();
+
+    assert_eq!(cpu.y, 9);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cpy_negative() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 9).unwrap();
+
+    cpu.pc = 0;
+    cpu.y = 8;
+    cpu.cpy(0xC0).unwrap();
+
+    assert_eq!(cpu.y, 8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.c(), false);
+}
+
+#[test]
+fn test_cpx_zero() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 8).unwrap();
+
+    cpu.pc = 0;
+    cpu.x = 8;
+    cpu.cpx(0xE0).unwrap();
+
+    assert_eq!(cpu.x, 8);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cpx_carry() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 8).unwrap();
+
+    cpu.pc = 0;
+    cpu.x = 9;
+    cpu.cpx(0xE0).unwrap();
+
+    assert_eq!(cpu.x, 9);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+    assert_eq!(cpu.p.c(), true);
+}
+
+#[test]
+fn test_cpx_negative() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1, 9).unwrap();
+
+    cpu.pc = 0;
+    cpu.x = 8;
+    cpu.cpx(0xE0).unwrap();
+
+    assert_eq!(cpu.x, 8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+    assert_eq!(cpu.p.c(), false);
+}
+
+#[test]
+fn test_iny_zero() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0xFF;
+    cpu.iny().unwrap();
+
+    assert_eq!(cpu.y, 0);
+    assert_eq!(cpu.p.z(), true);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_iny_positive() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 8;
+    cpu.iny().unwrap();
+
+    assert_eq!(cpu.y, 9);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), false);
+}
+
+#[test]
+fn test_iny_negative() {
+    let (_, mut cpu) = setup();
+
+    cpu.y = 0x81u8;
+    cpu.iny().unwrap();
+
+    assert_eq!(cpu.y, 0x82u8);
+    assert_eq!(cpu.p.z(), false);
+    assert_eq!(cpu.p.n(), true);
+}

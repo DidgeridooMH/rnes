@@ -52,6 +52,9 @@ impl CPU {
             0x98 => self.tya()?,
             0xA8 => self.tay()?,
             0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => self.ldy(opcode)?,
+            0xC0 | 0xC4 | 0xCC => self.cpy(opcode)?,
+            0xE0 | 0xE4 | 0xEC => self.cpx(opcode)?,
+            0xC8 => self.iny()?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -181,7 +184,7 @@ impl CPU {
     }
 
     fn dey(&mut self) -> OpcodeResult {
-        self.y -= 1;
+        self.y = self.y.wrapping_sub(1);
         self.set_nz_flags(self.y);
         Ok((1, 2))
     }
@@ -204,7 +207,6 @@ impl CPU {
             _ => AddressMode::from_code(opcode)?,
         };
         let (address, page_cross) = self.get_address(addr_mode)?;
-        println!("{}", address);
 
         self.y = self.bus.borrow_mut().read_byte(address)?;
         self.set_nz_flags(self.y);
@@ -214,5 +216,49 @@ impl CPU {
             cycles += 1;
         }
         Ok((addr_mode.byte_code_size() + 1, cycles))
+    }
+
+    fn cpy(&mut self, opcode: u8) -> OpcodeResult {
+        let addr_mode = match opcode {
+            0xC0 => AddressMode::Immediate,
+            _ => AddressMode::from_code(opcode)?,
+        };
+        let (address, page_cross) = self.get_address(addr_mode)?;
+
+        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let result = self.y.wrapping_sub(operand);
+        self.p.set_c(self.y >= operand);
+        self.set_nz_flags(result);
+
+        let mut cycles = addr_mode.cycle_cost() + 1;
+        if page_cross {
+            cycles += 1;
+        }
+        Ok((addr_mode.byte_code_size() + 1, cycles))
+    }
+
+    fn cpx(&mut self, opcode: u8) -> OpcodeResult {
+        let addr_mode = match opcode {
+            0xE0 => AddressMode::Immediate,
+            _ => AddressMode::from_code(opcode)?,
+        };
+        let (address, page_cross) = self.get_address(addr_mode)?;
+
+        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let result = self.x.wrapping_sub(operand);
+        self.p.set_c(self.x >= operand);
+        self.set_nz_flags(result);
+
+        let mut cycles = addr_mode.cycle_cost() + 1;
+        if page_cross {
+            cycles += 1;
+        }
+        Ok((addr_mode.byte_code_size() + 1, cycles))
+    }
+
+    fn iny(&mut self) -> OpcodeResult {
+        self.y = self.y.wrapping_add(1);
+        self.set_nz_flags(self.y);
+        Ok((1, 2))
     }
 }
