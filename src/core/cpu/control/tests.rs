@@ -467,6 +467,17 @@ fn test_rti() {
 }
 
 #[test]
+fn test_rts() {
+    let (_, mut cpu) = setup();
+
+    cpu.push_word(0x500u16).unwrap();
+
+    cpu.rts().unwrap();
+
+    assert_eq!(cpu.pc, 0x500u16);
+}
+
+#[test]
 fn test_jmp_absolute() {
     let (bus, mut cpu) = setup();
 
@@ -508,4 +519,47 @@ fn test_jmp_indirect_page_bug() {
     cpu.jmp(0x6Cu8).unwrap();
 
     assert_eq!(cpu.pc, 0xAABBu16);
+}
+
+#[test]
+fn test_sty_zero_page() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1u16, 0x8u8).unwrap();
+
+    cpu.y = 0xABu8;
+    cpu.pc = 0u16;
+    cpu.sty(0x84u8).unwrap();
+
+    let result = bus.borrow().read_byte(0x8u16).unwrap();
+    assert_eq!(result, 0xABu8);
+}
+
+#[test]
+fn test_sty_zero_page_x() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(0x1u16, 0x8u8).unwrap();
+
+    cpu.x = 0x2u8;
+    cpu.y = 0xABu8;
+    cpu.pc = 0u16;
+    cpu.sty(0x94u8).unwrap();
+
+    let result = bus.borrow().read_byte(0xAu16).unwrap();
+    assert_eq!(result, 0xABu8);
+}
+
+#[test]
+fn test_sty_absolute() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_word(0x1u16, 0x701u16).unwrap();
+
+    cpu.y = 0xABu8;
+    cpu.pc = 0u16;
+    cpu.sty(0x8Cu8).unwrap();
+
+    let result = bus.borrow().read_byte(0x701u16).unwrap();
+    assert_eq!(result, 0xABu8);
 }

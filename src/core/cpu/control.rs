@@ -45,7 +45,9 @@ impl CPU {
             0x20 => self.jsr()?,
             0x24 | 0x2C => self.bit(opcode)?,
             0x40 => self.rti()?,
+            0x60 => self.rts()?,
             0x4C | 0x6C => self.jmp(opcode)?,
+            0x84 | 0x94 | 0x8C => self.sty(opcode)?,
             _ => unimplemented!("Rest of control opcodes"),
         };
 
@@ -146,6 +148,11 @@ impl CPU {
         Ok((1, 6))
     }
 
+    fn rts(&mut self) -> OpcodeResult {
+        self.pc = self.pop_word()?;
+        Ok((1, 6))
+    }
+
     fn jmp(&mut self, opcode: u8) -> OpcodeResult {
         let addr_mode = match opcode {
             0x4Cu8 => AddressMode::Absolute,
@@ -159,5 +166,14 @@ impl CPU {
 
         // Don't increment the PC so that jmps go direct.
         Ok((0, addr_mode.cycle_cost()))
+    }
+
+    fn sty(&mut self, opcode: u8) -> OpcodeResult {
+        let addr_mode = AddressMode::from_code(opcode)?;
+        let (address, _) = self.get_address(addr_mode)?;
+
+        self.bus.borrow_mut().write_byte(address, self.y)?;
+
+        Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 2))
     }
 }
