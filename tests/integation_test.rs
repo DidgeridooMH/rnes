@@ -36,5 +36,5 @@ fn test_cpu_alu() {
     }
 
     assert_eq!(cpu.a, 0x10);
-    assert_eq!(cpu.p.c(), true);
+    assert!(cpu.p.c());
 }

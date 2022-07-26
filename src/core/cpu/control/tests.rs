@@ -388,9 +388,9 @@ fn test_bit_zero_page() {
     cpu.bit(0x24u8).unwrap();
 
     assert_eq!(cpu.a, 0x81u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.v(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.v());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -408,9 +408,9 @@ fn test_bit_absolute() {
     cpu.bit(0x2Cu8).unwrap();
 
     assert_eq!(cpu.a, 0x81u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.v(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.v());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -428,9 +428,9 @@ fn test_bit_zero() {
     cpu.bit(0x2Cu8).unwrap();
 
     assert_eq!(cpu.a, 0x1u8);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.v(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.v());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -448,9 +448,9 @@ fn test_bit_overflow() {
     cpu.bit(0x2Cu8).unwrap();
 
     assert_eq!(cpu.a, 0x41u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.v(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.v());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -572,8 +572,8 @@ fn test_dey_zero() {
     cpu.dey().unwrap();
 
     assert_eq!(cpu.y, 0);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -584,8 +584,8 @@ fn test_dey_positive() {
     cpu.dey().unwrap();
 
     assert_eq!(cpu.y, 7);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -596,8 +596,8 @@ fn test_dey_negative() {
     cpu.dey().unwrap();
 
     assert_eq!(cpu.y, 0x80u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -609,8 +609,8 @@ fn test_tya_zero() {
     cpu.tya().unwrap();
 
     assert_eq!(cpu.a, 0);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -622,8 +622,8 @@ fn test_tya_positive() {
     cpu.tya().unwrap();
 
     assert_eq!(cpu.a, 8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -635,8 +635,8 @@ fn test_tya_negative() {
     cpu.tya().unwrap();
 
     assert_eq!(cpu.a, 0x81u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -648,8 +648,8 @@ fn test_tay_zero() {
     cpu.tay().unwrap();
 
     assert_eq!(cpu.y, 0);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -661,8 +661,8 @@ fn test_tay_positive() {
     cpu.tay().unwrap();
 
     assert_eq!(cpu.y, 8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -674,8 +674,8 @@ fn test_tay_negative() {
     cpu.tay().unwrap();
 
     assert_eq!(cpu.y, 0x81u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -700,9 +700,9 @@ fn test_cpy_zero() {
     cpu.cpy(0xC0).unwrap();
 
     assert_eq!(cpu.y, 8);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
-    assert_eq!(cpu.p.c(), true);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+    assert!(cpu.p.c());
 }
 
 #[test]
@@ -716,9 +716,9 @@ fn test_cpy_carry() {
     cpu.cpy(0xC0).unwrap();
 
     assert_eq!(cpu.y, 9);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
-    assert_eq!(cpu.p.c(), true);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+    assert!(cpu.p.c());
 }
 
 #[test]
@@ -732,9 +732,9 @@ fn test_cpy_negative() {
     cpu.cpy(0xC0).unwrap();
 
     assert_eq!(cpu.y, 8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
-    assert_eq!(cpu.p.c(), false);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+    assert!(!cpu.p.c());
 }
 
 #[test]
@@ -748,9 +748,9 @@ fn test_cpx_zero() {
     cpu.cpx(0xE0).unwrap();
 
     assert_eq!(cpu.x, 8);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
-    assert_eq!(cpu.p.c(), true);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+    assert!(cpu.p.c());
 }
 
 #[test]
@@ -764,9 +764,9 @@ fn test_cpx_carry() {
     cpu.cpx(0xE0).unwrap();
 
     assert_eq!(cpu.x, 9);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
-    assert_eq!(cpu.p.c(), true);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+    assert!(cpu.p.c());
 }
 
 #[test]
@@ -780,9 +780,9 @@ fn test_cpx_negative() {
     cpu.cpx(0xE0).unwrap();
 
     assert_eq!(cpu.x, 8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
-    assert_eq!(cpu.p.c(), false);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+    assert!(!cpu.p.c());
 }
 
 #[test]
@@ -793,8 +793,8 @@ fn test_iny_zero() {
     cpu.iny().unwrap();
 
     assert_eq!(cpu.y, 0);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -805,8 +805,8 @@ fn test_iny_positive() {
     cpu.iny().unwrap();
 
     assert_eq!(cpu.y, 9);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -817,8 +817,8 @@ fn test_iny_negative() {
     cpu.iny().unwrap();
 
     assert_eq!(cpu.y, 0x82u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }
 
 #[test]
@@ -829,8 +829,8 @@ fn test_inx_zero() {
     cpu.inx().unwrap();
 
     assert_eq!(cpu.x, 0);
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -841,8 +841,8 @@ fn test_inx_positive() {
     cpu.inx().unwrap();
 
     assert_eq!(cpu.x, 9);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -853,6 +853,6 @@ fn test_inx_negative() {
     cpu.inx().unwrap();
 
     assert_eq!(cpu.x, 0x82u8);
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }

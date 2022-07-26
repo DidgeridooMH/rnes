@@ -17,7 +17,12 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          components: clippy
           override: true
+      - name: Check style
+        uses: actions-rs/clippy@master
+        with:
+          args: --all-features --all-targets
       - name: Run cargo build
         uses: actions-rs/cargo@v1
         with:
