@@ -60,3 +60,68 @@ fn test_asl_to_negative() {
     assert!(cpu.p.n());
 }
 
+#[test]
+fn test_rol_zero() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0;
+    cpu.rol(0x2A).unwrap();
+
+    assert_eq!(cpu.a, 0);
+    assert!(!cpu.p.c());
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_rol_positive() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x2;
+    cpu.rol(0x2A).unwrap();
+
+    assert_eq!(cpu.a, 0x4);
+    assert!(!cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_rol_negative() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x82;
+    cpu.rol(0x2A).unwrap();
+
+    assert_eq!(cpu.a, 0x4);
+    assert!(cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_rol_to_negative() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x40;
+    cpu.rol(0x2A).unwrap();
+
+    assert_eq!(cpu.a, 0x80);
+    assert!(!cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_rol_from_carry() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x10;
+    cpu.p.set_c(true);
+    cpu.rol(0x2A).unwrap();
+
+    assert_eq!(cpu.a, 0x21);
+    assert!(!cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
