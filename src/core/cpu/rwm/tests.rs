@@ -165,3 +165,57 @@ fn test_lsr_into_carry() {
     assert!(cpu.p.c());
     assert!(!cpu.p.n());
 }
+
+#[test]
+fn test_ror_zero() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0;
+    cpu.ror(0x6A).unwrap();
+
+    assert_eq!(cpu.a, 0);
+    assert!(!cpu.p.c());
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_ror_positive() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x2;
+    cpu.ror(0x6A).unwrap();
+
+    assert_eq!(cpu.a, 0x1);
+    assert!(!cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_ror_negative() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x2;
+    cpu.p.set_c(true);
+    cpu.ror(0x6A).unwrap();
+
+    assert_eq!(cpu.a, 0x81);
+    assert!(!cpu.p.c());
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_rol_into_carry() {
+    let mut cpu = setup().1;
+
+    cpu.a = 1;
+    cpu.ror(0x6A).unwrap();
+
+    assert_eq!(cpu.a, 0);
+    assert!(cpu.p.c());
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
