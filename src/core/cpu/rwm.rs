@@ -15,6 +15,9 @@ impl CPU {
             0x86 | 0x96 | 0x8E => self.stx(opcode)?,
             0x8A => self.txa()?,
             0x9A => self.txs()?,
+            0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => self.ldx(opcode)?,
+            0xAA => self.tax()?,
+            0xBA => self.tsx()?,
             _ => unreachable!(),
         };
 
@@ -122,7 +125,7 @@ impl CPU {
 
         Ok((
             address_mode.byte_code_size() + 1,
-            address_mode.cycle_cost() + 2,
+            address_mode.cycle_cost() + 1,
         ))
     }
 
@@ -134,6 +137,36 @@ impl CPU {
 
     fn txs(&mut self) -> OpcodeResult {
         self.sp = self.x;
+        Ok((1, 2))
+    }
+
+    fn ldx(&mut self, opcode: u8) -> OpcodeResult {
+        let mut address_mode = AddressMode::from_code(opcode)?;
+        address_mode = match address_mode {
+            AddressMode::IndirectX => AddressMode::Immediate,
+            AddressMode::ZeroPageX => AddressMode::ZeroPageY,
+            _ => address_mode,
+        };
+
+        let (address, page_cross) = self.get_address(address_mode)?;
+        self.x = self.bus.borrow().read_byte(address)?;
+        self.set_nz_flags(self.x);
+
+        Ok((
+            address_mode.byte_code_size() + 1,
+            address_mode.cycle_cost() + 1 + page_cross as usize,
+        ))
+    }
+
+    fn tax(&mut self) -> OpcodeResult {
+        self.x = self.a;
+        self.set_nz_flags(self.x);
+        Ok((1, 2))
+    }
+
+    fn tsx(&mut self) -> OpcodeResult {
+        self.x = self.sp;
+        self.set_nz_flags(self.x);
         Ok((1, 2))
     }
 }

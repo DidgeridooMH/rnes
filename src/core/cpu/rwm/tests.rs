@@ -314,3 +314,129 @@ fn test_txs() {
     assert_eq!(cpu.x, 0x20);
     assert_eq!(status, cpu.p);
 }
+
+#[test]
+fn test_ldx_zero() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(1, 0).unwrap();
+    cpu.x = 4;
+    cpu.pc = 0;
+    cpu.ldx(0xA2).unwrap();
+
+    assert_eq!(cpu.x, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_ldx_positive() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(1, 2).unwrap();
+    cpu.x = 4;
+    cpu.pc = 0;
+    cpu.ldx(0xA2).unwrap();
+
+    assert_eq!(cpu.x, 2);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_ldx_negative() {
+    let (bus, mut cpu) = setup();
+
+    bus.borrow_mut().write_byte(1, 0x80).unwrap();
+    cpu.x = 4;
+    cpu.pc = 0;
+    cpu.ldx(0xA2).unwrap();
+
+    assert_eq!(cpu.x, 0x80);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_tax_zero() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0;
+    cpu.x = 4;
+    cpu.tax().unwrap();
+
+    assert_eq!(cpu.x, 0);
+    assert_eq!(cpu.a, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_tax_positive() {
+    let mut cpu = setup().1;
+
+    cpu.a = 4;
+    cpu.x = 0;
+    cpu.tax().unwrap();
+
+    assert_eq!(cpu.x, 4);
+    assert_eq!(cpu.a, 4);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_tax_negative() {
+    let mut cpu = setup().1;
+
+    cpu.a = 0x81;
+    cpu.x = 0;
+    cpu.tax().unwrap();
+
+    assert_eq!(cpu.x, 0x81);
+    assert_eq!(cpu.a, 0x81);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_tsx_zero() {
+    let mut cpu = setup().1;
+
+    cpu.x = 4;
+    cpu.sp = 0;
+    cpu.tsx().unwrap();
+
+    assert_eq!(cpu.x, 0);
+    assert_eq!(cpu.sp, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_tsx_positive() {
+    let mut cpu = setup().1;
+
+    cpu.sp = 4;
+    cpu.x = 0;
+    cpu.tsx().unwrap();
+
+    assert_eq!(cpu.x, 4);
+    assert_eq!(cpu.sp, 4);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_tsx_negative() {
+    let mut cpu = setup().1;
+
+    cpu.sp = 0x81;
+    cpu.x = 0;
+    cpu.tsx().unwrap();
+
+    assert_eq!(cpu.x, 0x81);
+    assert_eq!(cpu.sp, 0x81);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
