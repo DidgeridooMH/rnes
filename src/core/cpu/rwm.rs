@@ -12,6 +12,9 @@ impl CPU {
             0x2A | 0x26 | 0x36 | 0x2E | 0x3E => self.rol(opcode)?,
             0x4A | 0x46 | 0x56 | 0x4E | 0x5E => self.lsr(opcode)?,
             0x6A | 0x66 | 0x76 | 0x6E | 0x7E => self.ror(opcode)?,
+            0x86 | 0x96 | 0x8E => self.stx(opcode)?,
+            0x8A => self.txa()?,
+            0x9A => self.txs()?,
             _ => unreachable!(),
         };
 
@@ -106,5 +109,31 @@ impl CPU {
                 address_mode.cycle_cost() + 2,
             ))
         }
+    }
+
+    fn stx(&mut self, opcode: u8) -> OpcodeResult {
+        let mut address_mode = AddressMode::from_code(opcode)?;
+        if let AddressMode::ZeroPageX = address_mode {
+            address_mode = AddressMode::ZeroPageY;
+        }
+
+        let address = self.get_address(address_mode)?.0;
+        self.bus.borrow_mut().write_byte(address, self.x)?;
+
+        Ok((
+            address_mode.byte_code_size() + 1,
+            address_mode.cycle_cost() + 2,
+        ))
+    }
+
+    fn txa(&mut self) -> OpcodeResult {
+        self.a = self.x;
+        self.set_nz_flags(self.a);
+        Ok((1, 2))
+    }
+
+    fn txs(&mut self) -> OpcodeResult {
+        self.sp = self.x;
+        Ok((1, 2))
     }
 }
