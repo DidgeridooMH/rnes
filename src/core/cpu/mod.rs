@@ -1,7 +1,9 @@
 mod alu;
 mod control;
 mod memory;
+mod rwm;
 mod status;
+
 #[cfg(test)]
 mod tests;
 
@@ -41,19 +43,16 @@ impl CPU {
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
-        match self.interrupt {
-            Some(Interrupt::Reset) => {
-                self.pc = self.bus.borrow().read_word(0xFFFCu16)?;
-                self.interrupt = None
-            }
-            _ => {}
+        if let Some(Interrupt::Reset) = self.interrupt {
+            self.pc = self.bus.borrow().read_word(0xFFFCu16)?;
+            self.interrupt = None
         }
 
         let opcode = self.bus.borrow().read_byte(self.pc)?;
         let cycles = match opcode % 4 {
             0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
-            2 => todo!("RMW operations need to be implemented"),
+            2 => self.run_rwm_op(opcode)?,
             3 => todo!("unofficial operations need implemented"),
             _ => unreachable!(),
         };
