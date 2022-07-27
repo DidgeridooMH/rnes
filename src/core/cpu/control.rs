@@ -82,9 +82,7 @@ impl CPU {
     }
 
     fn plp(&mut self) -> OpcodeResult {
-        let mut status = StatusRegister {
-            0: self.pop_byte()?,
-        };
+        let mut status = StatusRegister(self.pop_byte()?);
         status.set_b(0u8);
         self.p = status;
 

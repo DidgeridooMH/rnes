@@ -6,7 +6,7 @@ struct AddressableMock {
 
 impl Addressable for AddressableMock {
     fn read_byte(&self, _address: u16) -> u8 {
-        return self.data;
+        self.data
     }
 
     fn write_byte(&mut self, _address: u16, data: u8) {
@@ -20,7 +20,7 @@ struct MultiAddressableMock {
 
 impl Addressable for MultiAddressableMock {
     fn read_byte(&self, address: u16) -> u8 {
-        return self.data[(address % 2) as usize];
+        self.data[(address % 2) as usize]
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
@@ -34,7 +34,7 @@ fn test_register_region() {
     let mock = Rc::new(RefCell::new(AddressableMock { data: 0 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=10, mock.clone());
+    bus.register_region(0..=10, mock);
 
     assert!(!bus.regions.is_empty());
 }
@@ -45,7 +45,7 @@ fn test_read_byte() {
     let mock = Rc::new(RefCell::new(AddressableMock { data: 0x88u8 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=10, mock.clone());
+    bus.register_region(0..=10, mock);
 
     let result = bus.read_byte(0).unwrap();
 
@@ -59,8 +59,8 @@ fn test_read_byte_multiple_regions() {
     let mock_b = Rc::new(RefCell::new(AddressableMock { data: 0xEFu8 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=9, mock_a.clone());
-    bus.register_region(10..=20, mock_b.clone());
+    bus.register_region(0..=9, mock_a);
+    bus.register_region(10..=20, mock_b);
 
     let result_a = bus.read_byte(0).unwrap();
     let result_b = bus.read_byte(10).unwrap();
@@ -107,7 +107,7 @@ fn test_read_word() {
     let mock = Rc::new(RefCell::new(AddressableMock { data: 0x88u8 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=0x10, mock.clone());
+    bus.register_region(0..=0x10, mock);
 
     let result = bus.read_word(0).unwrap();
 
@@ -121,8 +121,8 @@ fn test_read_word_cross_boundary() {
     let mock_b = Rc::new(RefCell::new(AddressableMock { data: 0x77u8 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=0x0F, mock_a.clone());
-    bus.register_region(0x10..=0x20, mock_b.clone());
+    bus.register_region(0..=0x0F, mock_a);
+    bus.register_region(0x10..=0x20, mock_b);
 
     let result = bus.read_word(0xF).unwrap();
 
@@ -136,8 +136,8 @@ fn test_read_word_bug() {
     let mock_b = Rc::new(RefCell::new(AddressableMock { data: 0x77u8 }));
     let mut bus = bus.borrow_mut();
 
-    bus.register_region(0..=0xFF, mock_a.clone());
-    bus.register_region(0x100..=0x200, mock_b.clone());
+    bus.register_region(0..=0xFF, mock_a);
+    bus.register_region(0x100..=0x200, mock_b);
 
     let result = bus.read_word_bug(0xF).unwrap();
 

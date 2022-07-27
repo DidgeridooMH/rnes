@@ -5,27 +5,27 @@ mod tests;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum OpcodeGroup {
-    ORA,
-    AND,
-    EOR,
-    ADC,
-    STA,
-    LDA,
-    CMP,
-    SBC,
+    Ora,
+    And,
+    Eor,
+    Adc,
+    Sta,
+    Lda,
+    Cmp,
+    Sbc,
 }
 
 impl OpcodeGroup {
     pub fn from_code(code: u8) -> Self {
         match code {
-            0 => OpcodeGroup::ORA,
-            1 => OpcodeGroup::AND,
-            2 => OpcodeGroup::EOR,
-            3 => OpcodeGroup::ADC,
-            4 => OpcodeGroup::STA,
-            5 => OpcodeGroup::LDA,
-            6 => OpcodeGroup::CMP,
-            7 => OpcodeGroup::SBC,
+            0 => OpcodeGroup::Ora,
+            1 => OpcodeGroup::And,
+            2 => OpcodeGroup::Eor,
+            3 => OpcodeGroup::Adc,
+            4 => OpcodeGroup::Sta,
+            5 => OpcodeGroup::Lda,
+            6 => OpcodeGroup::Cmp,
+            7 => OpcodeGroup::Sbc,
             _ => unreachable!(),
         }
     }
@@ -39,21 +39,22 @@ impl CPU {
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
 
         match opcode_group {
-            OpcodeGroup::ORA => self.ora(operand),
-            OpcodeGroup::AND => self.and(operand),
-            OpcodeGroup::EOR => self.eor(operand),
-            OpcodeGroup::ADC => self.adc(operand),
-            OpcodeGroup::STA => match self.bus.borrow_mut().write_byte(address, self.a) {
-                Err(e) => return Err(e),
-                _ => (),
-            },
-            OpcodeGroup::LDA => self.lda(operand),
-            OpcodeGroup::CMP => self.cmp(operand),
-            OpcodeGroup::SBC => self.sbc(operand),
+            OpcodeGroup::Ora => self.ora(operand),
+            OpcodeGroup::And => self.and(operand),
+            OpcodeGroup::Eor => self.eor(operand),
+            OpcodeGroup::Adc => self.adc(operand),
+            OpcodeGroup::Sta => {
+                if let Err(e) = self.bus.borrow_mut().write_byte(address, self.a) {
+                    return Err(e);
+                }
+            }
+            OpcodeGroup::Lda => self.lda(operand),
+            OpcodeGroup::Cmp => self.cmp(operand),
+            OpcodeGroup::Sbc => self.sbc(operand),
         };
 
         let mut cycles = 1 + address_mode.cycle_cost();
-        if page_cross || (opcode_group == OpcodeGroup::STA) {
+        if page_cross || (opcode_group == OpcodeGroup::Sta) {
             cycles += 1;
         }
 

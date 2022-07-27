@@ -7,8 +7,8 @@ fn test_nz_flag_zero() {
 
     cpu.set_nz_flags(0u8);
 
-    assert_eq!(cpu.p.z(), true);
-    assert_eq!(cpu.p.n(), false);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -18,8 +18,8 @@ fn test_nz_flag_positive() {
 
     cpu.set_nz_flags(12u8);
 
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), false);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
 }
 
 #[test]
@@ -29,8 +29,8 @@ fn test_nz_flag_negative() {
 
     cpu.set_nz_flags(0x81u8);
 
-    assert_eq!(cpu.p.z(), false);
-    assert_eq!(cpu.p.n(), true);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
 }
 
 #[test]
