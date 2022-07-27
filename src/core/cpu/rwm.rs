@@ -18,7 +18,11 @@ impl CPU {
             0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => self.ldx(opcode)?,
             0xAA => self.tax()?,
             0xBA => self.tsx()?,
-            _ => unreachable!(),
+            0xC6 | 0xD6 | 0xCE | 0xDE => self.dec(opcode)?,
+            0xCA => self.dex()?,
+            0xE6 | 0xF6 | 0xEE | 0xFF => self.inc(opcode)?,
+            0xEA => (1, 2),
+            _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
         self.pc += ins_size;
@@ -168,5 +172,45 @@ impl CPU {
         self.x = self.sp;
         self.set_nz_flags(self.x);
         Ok((1, 2))
+    }
+
+    fn dec(&mut self, opcode: u8) -> OpcodeResult {
+        let address_mode = AddressMode::from_code(opcode)?;
+        let address = self.get_address(address_mode)?.0;
+        let operand = self.bus.borrow().read_byte(address)?;
+
+        self.bus
+            .borrow_mut()
+            .write_byte(address, operand.wrapping_sub(1))?;
+
+        self.set_nz_flags(operand.wrapping_sub(1));
+
+        Ok((
+            address_mode.byte_code_size() + 1,
+            address_mode.cycle_cost() + 1,
+        ))
+    }
+
+    fn dex(&mut self) -> OpcodeResult {
+        self.x = self.x.wrapping_sub(1);
+        self.set_nz_flags(self.x);
+        Ok((1, 2))
+    }
+
+    fn inc(&mut self, opcode: u8) -> OpcodeResult {
+        let address_mode = AddressMode::from_code(opcode)?;
+        let address = self.get_address(address_mode)?.0;
+        let operand = self.bus.borrow().read_byte(address)?;
+
+        self.bus
+            .borrow_mut()
+            .write_byte(address, operand.wrapping_add(1))?;
+
+        self.set_nz_flags(operand.wrapping_add(1));
+
+        Ok((
+            address_mode.byte_code_size() + 1,
+            address_mode.cycle_cost() + 1,
+        ))
     }
 }

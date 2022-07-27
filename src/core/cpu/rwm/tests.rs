@@ -440,3 +440,156 @@ fn test_tsx_negative() {
     assert!(!cpu.p.z());
     assert!(cpu.p.n());
 }
+
+#[test]
+fn test_dec_zero() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 1).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.dec(0xC6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_dec_positive() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 3).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.dec(0xC6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 2);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_dec_negative() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 0).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.dec(0xC6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 0xFF);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_dex_zero() {
+    let mut cpu = setup().1;
+
+    cpu.pc = 0;
+    cpu.x = 1;
+    cpu.dex().unwrap();
+
+    assert_eq!(cpu.x, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_dex_positive() {
+    let mut cpu = setup().1;
+
+    cpu.pc = 0;
+    cpu.x = 4;
+    cpu.dex().unwrap();
+
+    assert_eq!(cpu.x, 3);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_dex_negative() {
+    let mut cpu = setup().1;
+
+    cpu.pc = 0;
+    cpu.x = 0;
+    cpu.dex().unwrap();
+
+    assert_eq!(cpu.x, 0xFF);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
+
+#[test]
+fn test_inc_zero() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 0xFF).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.inc(0xE6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 0);
+    assert!(cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_inc_positive() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 3).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.inc(0xE6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 4);
+    assert!(!cpu.p.z());
+    assert!(!cpu.p.n());
+}
+
+#[test]
+fn test_inc_negative() {
+    let (bus, mut cpu) = setup();
+
+    {
+        let mut bus = bus.borrow_mut();
+        bus.write_byte(1, 5).unwrap();
+        bus.write_byte(5, 0x7F).unwrap();
+    }
+
+    cpu.pc = 0;
+    cpu.inc(0xE6).unwrap();
+
+    let res = bus.borrow().read_byte(5).unwrap();
+    assert_eq!(res, 0x80);
+    assert!(!cpu.p.z());
+    assert!(cpu.p.n());
+}
