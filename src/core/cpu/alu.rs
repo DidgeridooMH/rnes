@@ -43,11 +43,7 @@ impl CPU {
             OpcodeGroup::And => self.and(operand),
             OpcodeGroup::Eor => self.eor(operand),
             OpcodeGroup::Adc => self.adc(operand),
-            OpcodeGroup::Sta => {
-                if let Err(e) = self.bus.borrow_mut().write_byte(address, self.a) {
-                    return Err(e);
-                }
-            }
+            OpcodeGroup::Sta => self.bus.borrow_mut().write_byte(address, self.a)?,
             OpcodeGroup::Lda => self.lda(operand),
             OpcodeGroup::Cmp => self.cmp(operand),
             OpcodeGroup::Sbc => self.sbc(operand),
