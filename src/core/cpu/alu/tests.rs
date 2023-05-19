@@ -37,13 +37,13 @@ fn test_ora_zero_page() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
-        bus.write_byte(0x80u16, 0xAAu8).unwrap();
+        bus.write_byte(0x80u16, 0xaau8).unwrap();
     }
     cpu.a = 1u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x05u8).unwrap();
 
-    assert_eq!(cpu.a, 0xABu8);
+    assert_eq!(cpu.a, 0xabu8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -56,14 +56,14 @@ fn test_ora_zero_page_x() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
-        bus.write_byte(0x85u16, 0xAAu8).unwrap();
+        bus.write_byte(0x85u16, 0xaau8).unwrap();
     }
     cpu.a = 1u8;
     cpu.x = 5u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x15u8).unwrap();
 
-    assert_eq!(cpu.a, 0xABu8);
+    assert_eq!(cpu.a, 0xabu8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -76,13 +76,13 @@ fn test_ora_absolute() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x100u16, 0xC0u8).unwrap();
+        bus.write_byte(0x100u16, 0xc0u8).unwrap();
     }
     cpu.a = 3u8;
     cpu.pc = 0u16;
-    cpu.run_alu_op(0x0Du8).unwrap();
+    cpu.run_alu_op(0x0du8).unwrap();
 
-    assert_eq!(cpu.a, 0xC3u8);
+    assert_eq!(cpu.a, 0xc3u8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -95,14 +95,14 @@ fn test_ora_absolute_x() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 3u8;
     cpu.x = 5u8;
     cpu.pc = 0u16;
-    cpu.run_alu_op(0x1Du8).unwrap();
+    cpu.run_alu_op(0x1du8).unwrap();
 
-    assert_eq!(cpu.a, 0xC3u8);
+    assert_eq!(cpu.a, 0xc3u8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -115,14 +115,14 @@ fn test_ora_absolute_y() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 3u8;
     cpu.y = 5u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x19u8).unwrap();
 
-    assert_eq!(cpu.a, 0xC3u8);
+    assert_eq!(cpu.a, 0xc3u8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -136,14 +136,14 @@ fn test_ora_indirect_x() {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
         bus.write_word(0x85u16, 0x100u16).unwrap();
-        bus.write_byte(0x100u16, 0xC0u8).unwrap();
+        bus.write_byte(0x100u16, 0xc0u8).unwrap();
     }
     cpu.a = 3u8;
     cpu.x = 5u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x01u8).unwrap();
 
-    assert_eq!(cpu.a, 0xC3u8);
+    assert_eq!(cpu.a, 0xc3u8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -157,14 +157,14 @@ fn test_ora_indirect_y() {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
         bus.write_word(0x80u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 3u8;
     cpu.y = 5u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x11u8).unwrap();
 
-    assert_eq!(cpu.a, 0xC3u8);
+    assert_eq!(cpu.a, 0xc3u8);
     assert!(cpu.p.n());
     assert!(!cpu.p.z());
 }
@@ -174,7 +174,7 @@ fn test_and_immediate() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    bus.borrow_mut().write_byte(0x1u16, 0xC0u8).unwrap();
+    bus.borrow_mut().write_byte(0x1u16, 0xc0u8).unwrap();
     cpu.a = 0x81u8;
     cpu.pc = 0u16;
     cpu.run_alu_op(0x29u8).unwrap();
@@ -205,7 +205,7 @@ fn test_and_zero_page() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
-        bus.write_byte(0x80u16, 0xC0u8).unwrap();
+        bus.write_byte(0x80u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.pc = 0u16;
@@ -224,7 +224,7 @@ fn test_and_zero_page_x() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_byte(0x1u16, 0x80u8).unwrap();
-        bus.write_byte(0x85u16, 0xC0u8).unwrap();
+        bus.write_byte(0x85u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.x = 5u8;
@@ -244,11 +244,11 @@ fn test_and_absolute() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x100u16, 0xC0u8).unwrap();
+        bus.write_byte(0x100u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x83u8;
     cpu.pc = 0u16;
-    cpu.run_alu_op(0x2Du8).unwrap();
+    cpu.run_alu_op(0x2du8).unwrap();
 
     assert_eq!(cpu.a, 0x80u8);
     assert!(cpu.p.n());
@@ -263,12 +263,12 @@ fn test_and_absolute_x() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.x = 5u8;
     cpu.pc = 0u16;
-    cpu.run_alu_op(0x3Du8).unwrap();
+    cpu.run_alu_op(0x3du8).unwrap();
 
     assert_eq!(cpu.a, 0x80u8);
     assert!(cpu.p.n());
@@ -283,7 +283,7 @@ fn test_and_absolute_y() {
     {
         let mut bus = bus.borrow_mut();
         bus.write_word(0x1u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.y = 5u8;
@@ -304,7 +304,7 @@ fn test_and_indirect_x() {
         let mut bus = cpu.bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
         bus.write_word(0x85u16, 0x100u16).unwrap();
-        bus.write_byte(0x100u16, 0xC0u8).unwrap();
+        bus.write_byte(0x100u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.x = 5u8;
@@ -325,7 +325,7 @@ fn test_and_indirect_y() {
         let mut bus = bus.borrow_mut();
         bus.write_byte(1u16, 0x80u8).unwrap();
         bus.write_word(0x80u16, 0x100u16).unwrap();
-        bus.write_byte(0x105u16, 0xC0u8).unwrap();
+        bus.write_byte(0x105u16, 0xc0u8).unwrap();
     }
     cpu.a = 0x81u8;
     cpu.y = 5u8;
@@ -426,7 +426,7 @@ fn test_adc_carry() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    cpu.a = 0xFFu8;
+    cpu.a = 0xffu8;
     cpu.adc(0x2u8);
 
     assert_eq!(cpu.a, 0x1u8);
@@ -441,7 +441,7 @@ fn test_adc_overflow_pton() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    cpu.a = 0x7Fu8;
+    cpu.a = 0x7fu8;
     cpu.adc(0x01u8);
 
     assert_eq!(cpu.a, 0x80u8);
@@ -513,9 +513,9 @@ fn test_lda_negative() {
     let mut cpu = CPU::new(&bus);
 
     cpu.a = 0x80u8;
-    cpu.lda(0xEFu8);
+    cpu.lda(0xefu8);
 
-    assert_eq!(cpu.a, 0xEFu8);
+    assert_eq!(cpu.a, 0xefu8);
     assert!(!cpu.p.z());
     assert!(cpu.p.n());
 }
@@ -539,10 +539,10 @@ fn test_cmp_negative() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    cpu.a = 0xE0u8;
+    cpu.a = 0xe0u8;
     cpu.cmp(0x10u8);
 
-    assert_eq!(cpu.a, 0xE0u8);
+    assert_eq!(cpu.a, 0xe0u8);
     assert!(!cpu.p.z());
     assert!(cpu.p.n());
     assert!(cpu.p.c());
@@ -612,9 +612,9 @@ fn test_sbc_overflow_positive() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    cpu.a = 0x7Fu8;
+    cpu.a = 0x7fu8;
     cpu.p.set_c(true);
-    cpu.sbc(0xFFu8);
+    cpu.sbc(0xffu8);
 
     assert_eq!(cpu.a, 0x80u8);
     assert!(!cpu.p.z());
@@ -628,11 +628,11 @@ fn test_sbc_overflow_negative() {
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
 
-    cpu.a = 0xFEu8;
+    cpu.a = 0xfeu8;
     cpu.p.set_c(true);
-    cpu.sbc(0x7Fu8);
+    cpu.sbc(0x7fu8);
 
-    assert_eq!(cpu.a, 0x7Fu8);
+    assert_eq!(cpu.a, 0x7fu8);
     assert!(!cpu.p.z());
     assert!(!cpu.p.n());
     assert!(cpu.p.v());

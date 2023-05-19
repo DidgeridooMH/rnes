@@ -47,10 +47,10 @@ impl CPU {
             OpcodeGroup::Lda => self.lda(operand),
             OpcodeGroup::Cmp => self.cmp(operand),
             OpcodeGroup::Sbc => self.sbc(operand),
-        };
+        }
 
         let mut cycles = 1 + address_mode.cycle_cost();
-        if page_cross || (opcode_group == OpcodeGroup::Sta) {
+        if page_cross || opcode_group == OpcodeGroup::Sta {
             cycles += 1;
         }
 
@@ -95,7 +95,7 @@ impl CPU {
     fn sbc(&mut self, operand: u8) {
         self.p
             .set_v(match (self.a as i8).checked_sub(operand as i8) {
-                Some(r) => r.checked_sub(1 - self.p.c() as i8).is_none(),
+                Some(r) => r.checked_sub(1 - (self.p.c() as i8)).is_none(),
                 None => true,
             });
         self.a = self.a.wrapping_sub(operand);
