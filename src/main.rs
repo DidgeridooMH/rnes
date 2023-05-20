@@ -1,6 +1,7 @@
 use rnes::core::{cpu::CPU, Bus};
-use rnes::rom::load_rom;
-use std::{fs, cell::RefCell, rc::Rc};
+use rnes::rom::{load_rom, RomHeader};
+use std::println;
+use std::{cell::RefCell, fs, rc::Rc};
 
 use clap::Parser;
 
@@ -10,16 +11,18 @@ struct Args {
     #[arg(short, long)]
     rom: String,
     #[arg(long)]
-    show_ops: bool
+    show_ops: bool,
+    #[arg(long)]
+    rom_header: bool,
 }
 
 struct PPUMock;
 use rnes::core::Addressable;
 impl Addressable for PPUMock {
-    fn read_byte(&self, _address: u16) -> u8 { 
+    fn read_byte(&self, _address: u16) -> u8 {
         0xFF
     }
-    fn write_byte(&mut self, _address: u16, _data: u8) { }
+    fn write_byte(&mut self, _address: u16, _data: u8) {}
 }
 
 fn main() {
@@ -36,17 +39,26 @@ fn main() {
             return;
         }
     };
+
+    if cli.rom_header {
+        match RomHeader::from_slice(&rom_file[0..16]) {
+            Ok(h) => println!("{:?}", h),
+            Err(e) => println!("{}", e),
+        }
+        return;
+    }
+
     if let Err(e) = load_rom(&rom_file, &bus) {
         eprintln!("Error while loading rom: {e}");
         return;
     }
 
-    bus.borrow_mut().register_region(0x2000..=0x2007, Rc::new(RefCell::new(PPUMock {})));
+    bus.borrow_mut()
+        .register_region(0x2000..=0x2007, Rc::new(RefCell::new(PPUMock {})));
 
     loop {
         match cpu.tick() {
-            Ok(_cycle_count) => {
-            }
+            Ok(_cycle_count) => {}
             Err(e) => {
                 eprintln!("{}", e);
                 break;

@@ -4,11 +4,11 @@ pub use nrom::*;
 use crate::core::Bus;
 use std::{cell::RefCell, rc::Rc};
 
-/*#[derive(Debug)]
+#[derive(Debug)]
 enum MirrorArrangement {
     Horizontal,
     Vertical,
-}*/
+}
 
 #[derive(Debug)]
 pub enum Mapper {
@@ -27,10 +27,10 @@ impl Mapper {
 
 #[derive(Debug)]
 pub struct RomHeader {
-    //prg: u8,
-    //chr: u8,
-    //battery: bool,
-    //mirroring: MirrorArrangement,
+    prg: u8,
+    chr: u8,
+    battery: bool,
+    mirroring: MirrorArrangement,
     pub mapper: Mapper,
 }
 
@@ -41,13 +41,13 @@ impl RomHeader {
         }
 
         Ok(Self {
-            //prg: header[4],
-            //chr: header[5],
-            //battery: header[6] & 2 > 0,
-            /*mirroring: match header[6] & 1 > 0 {
+            prg: header[4],
+            chr: header[5],
+            battery: header[6] & 2 > 0,
+            mirroring: match header[6] & 1 > 0 {
                 true => MirrorArrangement::Horizontal,
                 false => MirrorArrangement::Vertical,
-            },*/
+            },
             mapper: Mapper::from_id((header[6] >> 4) & (header[7] & 0xF0u8)),
         })
     }
