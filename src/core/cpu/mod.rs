@@ -3,6 +3,7 @@ mod control;
 mod memory;
 mod rwm;
 mod status;
+mod opcodes;
 
 #[cfg(test)]
 mod tests;
@@ -24,6 +25,7 @@ pub struct CPU {
     pc: u16,
     pub p: StatusRegister,
     interrupt: Option<Interrupt>,
+    show_ops: bool
 }
 
 impl CPU {
@@ -39,7 +41,12 @@ impl CPU {
             pc: 0xFFFCu16,
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
+            show_ops: false
         }
+    }
+
+    pub fn set_show_ops(&mut self, show: bool) {
+        self.show_ops = show;
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
@@ -49,6 +56,9 @@ impl CPU {
         }
 
         let opcode = self.bus.borrow().read_byte(self.pc)?;
+        if self.show_ops {
+            print!("0x{:X}: {}", self.pc, opcodes::OPCODES[opcode as usize]);
+        }
         let cycles = match opcode % 4 {
             0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
@@ -56,6 +66,10 @@ impl CPU {
             3 => todo!("unofficial operations need implemented"),
             _ => unreachable!(),
         };
+
+        if self.show_ops {
+            println!();
+        }
 
         Ok(cycles)
     }
@@ -141,7 +155,7 @@ impl CPU {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum AddressMode {
     Immediate,
     ZeroPage,

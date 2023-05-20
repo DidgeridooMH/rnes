@@ -128,7 +128,7 @@ fn test_bpl_take_branch_change_page() {
 
     let (_, cycles) = cpu.branch(0x10u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x101u16);
+    assert_eq!(cpu.pc, 0x103u16);
     assert_eq!(cycles, 5);
 }
 
@@ -141,7 +141,7 @@ fn test_bpl_take_branch() {
 
     let (_, cycles) = cpu.branch(0x10u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -168,7 +168,7 @@ fn test_bmi_take_branch() {
 
     let (_, cycles) = cpu.branch(0x30u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -194,7 +194,7 @@ fn test_bvc_take_branch() {
 
     let (_, cycles) = cpu.branch(0x50u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -221,7 +221,7 @@ fn test_bvs_take_branch() {
 
     let (_, cycles) = cpu.branch(0x70u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -247,7 +247,7 @@ fn test_bcc_take_branch() {
 
     let (_, cycles) = cpu.branch(0x90u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -274,7 +274,7 @@ fn test_bcs_take_branch() {
 
     let (_, cycles) = cpu.branch(0xB0u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -300,7 +300,7 @@ fn test_bne_take_branch() {
 
     let (_, cycles) = cpu.branch(0xD0u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -327,7 +327,7 @@ fn test_beq_take_branch() {
 
     let (_, cycles) = cpu.branch(0xF0u8).unwrap();
 
-    assert_eq!(cpu.pc, 0x3u16);
+    assert_eq!(cpu.pc, 0x5u16);
     assert_eq!(cycles, 3);
 }
 
@@ -348,7 +348,7 @@ fn test_beq_miss_branch() {
 fn test_negative_branch() {
     let (bus, mut cpu) = setup();
 
-    bus.borrow_mut().write_byte(0x11u16, 0xFEu8).unwrap();
+    bus.borrow_mut().write_byte(0x11u16, 0xFCu8).unwrap();
     cpu.pc = 0x10;
 
     let (_, cycles) = cpu.branch(0x10u8).unwrap();

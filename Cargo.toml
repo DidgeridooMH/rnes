@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 bitfield = "0.13.2"
+clap = { version = "4.3.0", features = ["derive"] }
 

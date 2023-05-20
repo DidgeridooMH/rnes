@@ -115,7 +115,12 @@ impl CPU {
 
         if should_branch {
             let prev_pc = self.pc;
-            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as i8;
+
+            // PC is incremented after memory fetch.
+            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as i8 + 2;
+            if self.show_ops {
+                print!(" {offset}");
+            }
             self.pc = (self.pc as i16 + offset as i16) as u16;
 
             if (prev_pc >> 8) != (self.pc >> 8) {
@@ -124,6 +129,9 @@ impl CPU {
                 Ok((0, 3))
             }
         } else {
+            if self.show_ops {
+                print!(" bnt");
+            }
             Ok((2, 2))
         }
     }
@@ -168,6 +176,10 @@ impl CPU {
 
         let (address, _) = self.get_address(addr_mode)?;
         self.pc = address;
+
+        if self.show_ops {
+            print!(" {:?}({:X})", addr_mode, address);
+        }
 
         // Don't increment the PC so that jmps go direct.
         Ok((0, addr_mode.cycle_cost()))

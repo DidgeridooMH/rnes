@@ -38,6 +38,10 @@ impl CPU {
         let operand = self.bus.borrow_mut().read_byte(address)?;
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
 
+        if self.show_ops {
+            print!(" {:?}({:X}) {:X}", address_mode, address, operand);
+        }
+
         match opcode_group {
             OpcodeGroup::Ora => self.ora(operand),
             OpcodeGroup::And => self.and(operand),
