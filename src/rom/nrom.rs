@@ -12,13 +12,10 @@ pub struct Nrom {
 impl Nrom {
     pub fn register(data: &[u8], bus: &Rc<RefCell<Bus>>) {
         let rom = Rc::new(RefCell::new(Self {
-                prg_ram: [0; PRG_RAM_SIZE],
-                prg_rom: data[0..PRG_ROM_SIZE].try_into().unwrap(),
-            }));
-        bus.borrow_mut().register_region(
-            0x6000..=0xFFFF,
-            rom,
-        );
+            prg_ram: [0; PRG_RAM_SIZE],
+            prg_rom: data[0..PRG_ROM_SIZE].try_into().unwrap(),
+        }));
+        bus.borrow_mut().register_region(0x6000..=0xFFFF, rom);
     }
 }
 

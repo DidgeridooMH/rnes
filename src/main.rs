@@ -1,14 +1,11 @@
+use clap::Parser;
 use rnes::core::{Bus, CPU, PPU};
 use rnes::rom::{load_rom, RomHeader};
+use rnes::window::MainWindow;
 use std::println;
 use std::{cell::RefCell, fs, rc::Rc};
-use winit::{
-    event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
-};
-
-use clap::Parser;
+use winit::event_loop::EventLoop;
+use winit::{event::*, event_loop::ControlFlow};
 
 #[derive(Parser, Debug)]
 #[command(name = "RNES", author, version, about)]
@@ -69,35 +66,51 @@ fn start_emulation() {
         }
     }
 }
+
+match event {
+            Event::WindowEvent {
+                ref event,
+                window_id,
+            } if window_id == window.window.id() => {
+                if window.input(event) {
+                    match event {
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    state: ElementState::Pressed,
+                                    virtual_keycode: Some(VirtualKeyCode::Escape),
+                                    ..
+                                },
+                            ..
+                        } => *control_flow = ControlFlow::Exit,
+                        _ => {}
+                    }
+                }
+            }
+
 */
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let event_loop = EventLoop::new();
-    let window = match WindowBuilder::new().with_title("RNES").build(&event_loop) {
+    let window = match MainWindow::new(&event_loop).await {
         Ok(w) => w,
         Err(e) => {
-            eprintln!("Unable to open window {e}");
+            eprintln!("{e}");
             return;
         }
     };
 
-    event_loop.run(move |event, _, control_flow| match event {
-        Event::WindowEvent {
+    event_loop.run(move |event, _, control_flow| {
+        if let Event::WindowEvent {
             ref event,
             window_id,
-        } if window_id == window.id() => match event {
-            WindowEvent::CloseRequested
-            | WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        ..
-                    },
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            _ => {}
-        },
-        _ => {}
+        } = event
+        {
+            if window_id == window.window.id() {
+                window.input(event, control_flow);
+            }
+        }
     });
 }
