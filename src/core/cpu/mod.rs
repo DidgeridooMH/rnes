@@ -57,11 +57,16 @@ impl CPU {
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
         if let Some(interrupt) = self.interrupt {
+            self.push_word(self.pc)?;
+            let mut status = self.p;
+            status.set_b(0);
+            self.push_byte(status.0)?;
             let vector_address = match interrupt {
                 Interrupt::Nmi => 0xFFFA,
                 Interrupt::Reset => 0xFFFC,
             };
             self.pc = self.bus.borrow().read_word(vector_address)?;
+            self.p.set_i(true);
             self.interrupt = None;
         }
 
