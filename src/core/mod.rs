@@ -1,8 +1,12 @@
+mod apu;
 mod bus;
+mod controller;
 mod cpu;
 mod ppu;
 
+pub use apu::*;
 pub use bus::*;
+pub use controller::*;
 pub use cpu::*;
 pub use ppu::*;
 
@@ -48,6 +52,17 @@ impl Nes {
             .register_region(0x2000..=0x2007, ppu.clone());
         bus.borrow_mut()
             .register_region(0x4014..=0x4014, ppu.clone());
+
+        let controller = Rc::new(RefCell::new(Controller::default()));
+        bus.borrow_mut()
+            .register_region(0x4016..=0x4017, controller);
+
+        let apu = Rc::new(RefCell::new(APU {}));
+        bus.borrow_mut()
+            .register_region(0x4000..=0x4013, apu.clone());
+        bus.borrow_mut()
+            .register_region(0x4015..=0x4015, apu.clone());
+        bus.borrow_mut().register_region(0x4017..=0x4017, apu);
 
         let rom_file = match fs::read(rom_file) {
             Ok(f) => f,
