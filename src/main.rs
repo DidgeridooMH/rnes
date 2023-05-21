@@ -1,7 +1,8 @@
 use clap::Parser;
 use rnes::core::{Bus, CPU, PPU};
 use rnes::rom::{load_rom, RomHeader};
-use rnes::window::MainWindow;
+use rnes::window::screen::{Pixel, ScreenBuffer};
+use rnes::window::{MainWindow, BYTES_PER_PIXEL, NATIVE_RESOLUTION};
 use std::println;
 use std::{cell::RefCell, fs, rc::Rc};
 use winit::event_loop::EventLoop;
@@ -91,16 +92,31 @@ match event {
 
 */
 
+fn update_screen(screen: &mut ScreenBuffer) {
+    for y in 0..NATIVE_RESOLUTION.height as usize {
+        for x in 0..NATIVE_RESOLUTION.width as usize {
+            let p = &mut screen.buffer[y * NATIVE_RESOLUTION.width as usize + x];
+            if p.r == 255 {
+                p.r = 0;
+            }
+            p.r += 1;
+            p.a = 0xFF;
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let event_loop = EventLoop::new();
-    let window = match MainWindow::new(&event_loop).await {
+    let mut window = match MainWindow::new(&event_loop).await {
         Ok(w) => w,
         Err(e) => {
             eprintln!("{e}");
             return;
         }
     };
+
+    let mut screen = Box::<ScreenBuffer>::default();
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -113,7 +129,8 @@ async fn main() {
         }
         Event::RedrawRequested(window_id) if window_id == window.window.id() => {
             // TODO: window update
-            match window.render() {
+            update_screen(&mut screen);
+            match window.render(&screen.buffer) {
                 Ok(_) => {}
                 Err(e) => {
                     eprintln!("{:?}", e);
