@@ -50,6 +50,7 @@ pub struct PPU {
     nmi_enabled: bool,
     vblank: bool,
     fine_x: u8,
+    frame_count: u32,
 }
 
 impl Default for PPU {
@@ -70,7 +71,12 @@ impl PPU {
             nmi_enabled: true,
             vblank: false,
             fine_x: 0,
+            frame_count: 0,
         }
+    }
+
+    pub fn frame_count(&self) -> u32 {
+        self.frame_count
     }
 
     pub fn tick(&mut self) -> bool {
@@ -97,6 +103,7 @@ impl PPU {
             self.scanline += 1;
             if self.scanline > MAX_SCANLINE {
                 self.scanline = 0;
+                self.frame_count += 1;
             }
             self.cycle = 0;
         }

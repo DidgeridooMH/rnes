@@ -83,7 +83,7 @@ impl CPU {
             0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
             2 => self.run_rwm_op(opcode)?,
-            3 => todo!("unofficial operations need implemented"),
+            3 => return Err(CoreError::OpcodeNotImplemented(opcode)),
             _ => unreachable!(),
         };
 
@@ -152,14 +152,16 @@ impl CPU {
     }
 
     fn push_byte(&mut self, data: u8) -> Result<(), CoreError> {
-        self.bus.borrow_mut().write_byte(self.sp as u16, data)?;
+        self.bus
+            .borrow_mut()
+            .write_byte(0x100 + self.sp as u16, data)?;
         self.sp -= 1;
         Ok(())
     }
 
     fn pop_byte(&mut self) -> Result<u8, CoreError> {
         self.sp += 1;
-        self.bus.borrow_mut().read_byte(self.sp as u16)
+        self.bus.borrow_mut().read_byte(0x100 + self.sp as u16)
     }
 
     fn push_word(&mut self, data: u16) -> Result<(), CoreError> {
@@ -172,6 +174,13 @@ impl CPU {
         let mut result = self.pop_byte()? as u16;
         result |= (self.pop_byte()? as u16) << 8;
         Ok(result)
+    }
+
+    pub fn dump(&self) {
+        println!("\n==== CPU DUMP ====");
+        println!("A: ${:X}\tX: ${:X}", self.a, self.x);
+        println!("Y: ${:X}\tSP: ${:X}", self.y, self.sp);
+        println!("PC: ${:X}\tP: {:?}", self.pc, self.p);
     }
 }
 

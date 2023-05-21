@@ -159,7 +159,7 @@ impl CPU {
         self.p.0 = self.pop_byte()?;
         self.p.set_b(0);
         self.pc = self.pop_word()?;
-        Ok((1, 6))
+        Ok((0, 6))
     }
 
     fn rts(&mut self) -> OpcodeResult {

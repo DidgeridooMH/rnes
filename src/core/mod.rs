@@ -88,7 +88,11 @@ impl Nes {
                 }
                 Ok(())
             }
-            Err(e) => Err(e.to_string()),
+            Err(e) => {
+                self.cpu.dump();
+                println!("PPU Frame Count: {}", self.ppu.borrow().frame_count());
+                Err(e.to_string())
+            }
         }
     }
 }
