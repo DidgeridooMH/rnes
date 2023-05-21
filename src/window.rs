@@ -1,3 +1,4 @@
+use wgpu::{Device, Queue, Surface};
 use winit::{
     dpi::PhysicalSize,
     event::WindowEvent,
@@ -10,6 +11,9 @@ const SCALING_FACTOR: u32 = 2;
 
 pub struct MainWindow {
     pub window: Window,
+    surface: Surface,
+    device: Device,
+    queue: Queue,
 }
 
 impl MainWindow {
@@ -73,7 +77,12 @@ impl MainWindow {
             view_formats: vec![],
         };
         surface.configure(&device, &config);
-        Ok(Self { window })
+        Ok(Self {
+            window,
+            surface,
+            device,
+            queue,
+        })
     }
 
     // TODO: Make message channel.
@@ -81,5 +90,44 @@ impl MainWindow {
         if let WindowEvent::CloseRequested = event {
             *control_flow = ControlFlow::Exit
         }
+    }
+
+    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+        let output = self.surface.get_current_texture()?;
+
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        {
+            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
     }
 }

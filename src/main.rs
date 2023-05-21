@@ -102,15 +102,27 @@ async fn main() {
         }
     };
 
-    event_loop.run(move |event, _, control_flow| {
-        if let Event::WindowEvent {
+    event_loop.run(move |event, _, control_flow| match event {
+        Event::WindowEvent {
             ref event,
             window_id,
-        } = event
-        {
+        } => {
             if window_id == window.window.id() {
                 window.input(event, control_flow);
             }
         }
+        Event::RedrawRequested(window_id) if window_id == window.window.id() => {
+            // TODO: window update
+            match window.render() {
+                Ok(_) => {}
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                }
+            }
+        }
+        Event::MainEventsCleared => {
+            window.window.request_redraw();
+        }
+        _ => {}
     });
 }
