@@ -43,11 +43,13 @@ const MAX_SCANLINE: u32 = 261;
 pub struct PPU {
     t: PPUAddress,
     v: PPUAddress,
+    w: bool,
     cycle: u32,
     scanline: u32,
     increment_size: u32,
     nmi_enabled: bool,
     vblank: bool,
+    fine_x: u8,
 }
 
 impl Default for PPU {
@@ -61,11 +63,13 @@ impl PPU {
         Self {
             t: PPUAddress(0),
             v: PPUAddress(0),
+            w: false,
             cycle: 0,
             scanline: 0,
             increment_size: 1,
             nmi_enabled: true,
             vblank: false,
+            fine_x: 0,
         }
     }
 
@@ -103,24 +107,51 @@ impl PPU {
             && (0..=255).contains(&self.cycle)
             && (328..=340).contains(&self.cycle)
         {
-            self.v.set_coarse_x(self.v.coarse_x() + 1);
+            self.increment_x();
         } else if self.cycle == 256 {
-            self.v.set_coarse_x(self.v.coarse_x() + 1);
-            self.v.set_coarse_y(self.v.coarse_y() + 1);
+            self.increment_x();
+            self.increment_y();
         } else if self.cycle == 257 {
             self.v.set_coarse_x(self.t.coarse_x());
+            self.v.set_nametable_select(
+                (self.v.nametable_select() & 0b10) | (self.t.nametable_select() & 0b01),
+            );
         } else if (280..=304).contains(&self.cycle) {
             self.v.set_coarse_y(self.t.coarse_y());
+            self.v.set_nametable_select(
+                (self.v.nametable_select() & 0b01) | (self.t.nametable_select() & 0b10),
+            )
         }
+    }
+
+    fn increment_x(&mut self) {
+        if self.v.coarse_x() == 0b11111 {
+            self.v.set_nametable_select(self.v.nametable_select() ^ 1);
+        }
+        self.v.set_coarse_x(self.v.coarse_x() + 1);
+    }
+
+    fn increment_y(&mut self) {
+        if self.v.fine_y() == 0b111 {
+            if self.v.coarse_y() == 0b11111 {
+                self.v
+                    .set_nametable_select(self.v.nametable_select() ^ 0b10);
+            }
+            self.v.set_coarse_y(self.v.coarse_y() + 1);
+        }
+        self.v.set_fine_y(self.v.fine_y() + 1);
     }
 }
 
 impl Addressable for PPU {
-    fn read_byte(&self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> u8 {
         // TODO: Implement stale data.
         match address {
             // TODO: Implement sprite overflow and sprite0 hit.
-            0x2002 => (self.vblank as u8) << 7,
+            0x2002 => {
+                self.w = false;
+                (self.vblank as u8) << 7
+            }
             _ => {
                 unimplemented!("Reading from VRAM at {address:X}");
             }
@@ -146,6 +177,26 @@ impl Addressable for PPU {
             }
             0x2001 => {
                 // TODO: Implement masking.
+            }
+            0x2003 => {
+                // TODO: Implement OAMADDR
+            }
+            0x2004 => {
+                // TODO: Implement OAMDATA
+            }
+            0x2005 => {
+                if !self.w {
+                    self.t.set_coarse_x((data >> 3).into());
+                    self.fine_x = data & 0b111;
+                    self.w = true;
+                } else {
+                    self.t.set_fine_y((data & 3).into());
+                    self.t.set_coarse_y((data >> 3).into());
+                    self.w = false;
+                }
+            }
+            0x4014 => {
+                // TODO: Implement OAM DMA
             }
             _ => {
                 unimplemented!("Writing to VRAM at {address:X}");

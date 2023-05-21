@@ -6,7 +6,8 @@ pub use bus::*;
 pub use cpu::*;
 pub use ppu::*;
 
-use std::fmt;
+use crate::rom::load_rom;
+use std::{cell::RefCell, fmt, fs, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CoreError {
@@ -27,6 +28,52 @@ impl fmt::Display for CoreError {
             CoreError::OpcodeNotImplemented(opcode) => {
                 write!(f, "Opcode not implemented: 0x{0:02X}", opcode)
             }
+        }
+    }
+}
+
+pub struct Nes {
+    cpu: CPU,
+    ppu: Rc<RefCell<PPU>>,
+}
+
+impl Nes {
+    pub fn new(rom_file: &str, show_ops: bool) -> Result<Self, String> {
+        let bus = Bus::new();
+        let mut cpu = CPU::new(&bus);
+        cpu.set_show_ops(show_ops);
+
+        let ppu = Rc::new(RefCell::new(PPU::new()));
+        bus.borrow_mut()
+            .register_region(0x2000..=0x2007, ppu.clone());
+        bus.borrow_mut()
+            .register_region(0x4014..=0x4014, ppu.clone());
+
+        let rom_file = match fs::read(rom_file) {
+            Ok(f) => f,
+            _ => {
+                return Err("Unable to read rom file.".into());
+            }
+        };
+
+        if let Err(e) = load_rom(&rom_file, &bus) {
+            return Err(format!("Error while loading rom: {e}"));
+        }
+
+        Ok(Self { cpu, ppu })
+    }
+
+    pub fn emulate(&mut self) -> Result<(), String> {
+        match self.cpu.tick() {
+            Ok(cycle_count) => {
+                for _ in 0..(cycle_count * 3) {
+                    if self.ppu.borrow_mut().tick() {
+                        self.cpu.generate_nmi();
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => Err(e.to_string()),
         }
     }
 }

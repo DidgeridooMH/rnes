@@ -20,7 +20,7 @@ impl Nrom {
 }
 
 impl Addressable for Nrom {
-    fn read_byte(&self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> u8 {
         match address {
             0x6000..=0x7FFF => self.prg_ram[(address as usize - 0x6000) % PRG_RAM_SIZE],
             0x8000..=0xFFFF => self.prg_rom[(address as usize - 0x8000) % PRG_ROM_SIZE],

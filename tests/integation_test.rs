@@ -6,7 +6,7 @@ struct TestCartridge {
 }
 
 impl Addressable for TestCartridge {
-    fn read_byte(&self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> u8 {
         match address {
             0xFFFCu16 => 0x00,
             0xFFFDu16 => 0x80,

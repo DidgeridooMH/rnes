@@ -65,12 +65,12 @@ impl CPU {
                 Interrupt::Nmi => 0xFFFA,
                 Interrupt::Reset => 0xFFFC,
             };
-            self.pc = self.bus.borrow().read_word(vector_address)?;
+            self.pc = self.bus.borrow_mut().read_word(vector_address)?;
             self.p.set_i(true);
             self.interrupt = None;
         }
 
-        let opcode = self.bus.borrow().read_byte(self.pc)?;
+        let opcode = self.bus.borrow_mut().read_byte(self.pc)?;
         if self.show_ops {
             print!(
                 "0x{:X}: {}({:X})",
@@ -103,7 +103,7 @@ impl CPU {
         match address_mode {
             AddressMode::Immediate => Ok((self.pc + 1, false)),
             AddressMode::ZeroPage => Ok((
-                self.bus.borrow().read_byte(self.pc + 1).unwrap() as u16,
+                self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
                 false,
             )),
             AddressMode::ZeroPageX => Ok((
@@ -114,7 +114,7 @@ impl CPU {
                 (self.get_address(AddressMode::ZeroPage)?.0 + self.y as u16) % 256,
                 false,
             )),
-            AddressMode::Absolute => Ok((self.bus.borrow().read_word(self.pc + 1)?, false)),
+            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1)?, false)),
             AddressMode::AbsoluteX => {
                 let address = self.get_address(AddressMode::Absolute)?.0;
                 Ok((

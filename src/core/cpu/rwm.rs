@@ -39,7 +39,7 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let operand = self.bus.borrow().read_byte(address)?;
+            let operand = self.bus.borrow_mut().read_byte(address)?;
             self.p.set_c(operand & 0x80 > 0);
             self.bus.borrow_mut().write_byte(address, operand << 1)?;
             self.set_nz_flags(operand << 1);
@@ -61,7 +61,7 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let mut operand = self.bus.borrow().read_byte(address)?;
+            let mut operand = self.bus.borrow_mut().read_byte(address)?;
             self.p.set_c(operand & 0x80 > 0);
             operand <<= 1;
             operand |= carry;
@@ -83,7 +83,7 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let operand = self.bus.borrow().read_byte(address)?;
+            let operand = self.bus.borrow_mut().read_byte(address)?;
             self.p.set_c(operand & 1 > 0);
             self.bus.borrow_mut().write_byte(address, operand >> 1)?;
             self.set_nz_flags(operand >> 1);
@@ -105,7 +105,7 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let mut operand = self.bus.borrow().read_byte(address)?;
+            let mut operand = self.bus.borrow_mut().read_byte(address)?;
             self.p.set_c(operand & 1 > 0);
             operand >>= 1;
             operand |= carry * 0x80;
@@ -153,7 +153,7 @@ impl CPU {
         };
 
         let (address, page_cross) = self.get_address(address_mode)?;
-        self.x = self.bus.borrow().read_byte(address)?;
+        self.x = self.bus.borrow_mut().read_byte(address)?;
         self.set_nz_flags(self.x);
 
         Ok((
@@ -177,7 +177,7 @@ impl CPU {
     fn dec(&mut self, opcode: u8) -> OpcodeResult {
         let address_mode = AddressMode::from_code(opcode)?;
         let address = self.get_address(address_mode)?.0;
-        let operand = self.bus.borrow().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address)?;
 
         self.bus
             .borrow_mut()
@@ -200,7 +200,7 @@ impl CPU {
     fn inc(&mut self, opcode: u8) -> OpcodeResult {
         let address_mode = AddressMode::from_code(opcode)?;
         let address = self.get_address(address_mode)?.0;
-        let operand = self.bus.borrow().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address)?;
 
         self.bus
             .borrow_mut()
