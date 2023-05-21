@@ -2,6 +2,11 @@ use rnes::core::{Bus, CPU, PPU};
 use rnes::rom::{load_rom, RomHeader};
 use std::println;
 use std::{cell::RefCell, fs, rc::Rc};
+use winit::{
+    event::*,
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
 
 use clap::Parser;
 
@@ -16,9 +21,9 @@ struct Args {
     rom_header: bool,
 }
 
-fn main() {
+/*
+fn start_emulation() {
     let cli = Args::parse();
-
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
     cpu.set_show_ops(cli.show_ops);
@@ -63,4 +68,36 @@ fn main() {
             }
         }
     }
+}
+*/
+
+fn main() {
+    let event_loop = EventLoop::new();
+    let window = match WindowBuilder::new().with_title("RNES").build(&event_loop) {
+        Ok(w) => w,
+        Err(e) => {
+            eprintln!("Unable to open window {e}");
+            return;
+        }
+    };
+
+    event_loop.run(move |event, _, control_flow| match event {
+        Event::WindowEvent {
+            ref event,
+            window_id,
+        } if window_id == window.id() => match event {
+            WindowEvent::CloseRequested
+            | WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                        ..
+                    },
+                ..
+            } => *control_flow = ControlFlow::Exit,
+            _ => {}
+        },
+        _ => {}
+    });
 }
