@@ -1,9 +1,9 @@
 mod alu;
 mod control;
 mod memory;
+mod opcodes;
 mod rwm;
 mod status;
-mod opcodes;
 
 #[cfg(test)]
 mod tests;
@@ -12,8 +12,10 @@ use self::{memory::InternalRam, status::StatusRegister};
 use super::{Addressable, Bus, CoreError};
 use std::{cell::RefCell, rc::Rc};
 
+#[derive(Copy, Clone, Debug)]
 enum Interrupt {
     Reset,
+    Nmi,
 }
 
 pub struct CPU {
@@ -25,7 +27,7 @@ pub struct CPU {
     pc: u16,
     pub p: StatusRegister,
     interrupt: Option<Interrupt>,
-    show_ops: bool
+    show_ops: bool,
 }
 
 impl CPU {
@@ -41,7 +43,7 @@ impl CPU {
             pc: 0xFFFCu16,
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
-            show_ops: false
+            show_ops: false,
         }
     }
 
@@ -49,15 +51,28 @@ impl CPU {
         self.show_ops = show;
     }
 
+    pub fn generate_nmi(&mut self) {
+        self.interrupt = Some(Interrupt::Nmi);
+    }
+
     pub fn tick(&mut self) -> Result<usize, CoreError> {
-        if let Some(Interrupt::Reset) = self.interrupt {
-            self.pc = self.bus.borrow().read_word(0xFFFCu16)?;
-            self.interrupt = None
+        if let Some(interrupt) = self.interrupt {
+            let vector_address = match interrupt {
+                Interrupt::Nmi => 0xFFFA,
+                Interrupt::Reset => 0xFFFC,
+            };
+            self.pc = self.bus.borrow().read_word(vector_address)?;
+            self.interrupt = None;
         }
 
         let opcode = self.bus.borrow().read_byte(self.pc)?;
         if self.show_ops {
-            print!("0x{:X}: {}", self.pc, opcodes::OPCODES[opcode as usize]);
+            print!(
+                "0x{:X}: {}({:X})",
+                self.pc,
+                opcodes::OPCODES[opcode as usize],
+                opcode
+            );
         }
         let cycles = match opcode % 4 {
             0 => self.run_control_op(opcode)?,

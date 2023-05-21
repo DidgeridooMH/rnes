@@ -1,6 +1,10 @@
 mod bus;
-pub mod cpu;
+mod cpu;
+mod ppu;
+
 pub use bus::*;
+pub use cpu::*;
+pub use ppu::*;
 
 use std::fmt;
 

@@ -1,4 +1,4 @@
-use rnes::core::{cpu::CPU, Bus};
+use rnes::core::{Bus, CPU, PPU};
 use rnes::rom::{load_rom, RomHeader};
 use std::println;
 use std::{cell::RefCell, fs, rc::Rc};
@@ -16,21 +16,16 @@ struct Args {
     rom_header: bool,
 }
 
-struct PPUMock;
-use rnes::core::Addressable;
-impl Addressable for PPUMock {
-    fn read_byte(&self, _address: u16) -> u8 {
-        0xFF
-    }
-    fn write_byte(&mut self, _address: u16, _data: u8) {}
-}
-
 fn main() {
     let cli = Args::parse();
 
     let bus = Bus::new();
     let mut cpu = CPU::new(&bus);
     cpu.set_show_ops(cli.show_ops);
+
+    let ppu = Rc::new(RefCell::new(PPU::new()));
+    bus.borrow_mut()
+        .register_region(0x2000..=0x2007, ppu.clone());
 
     let rom_file = match fs::read(cli.rom) {
         Ok(f) => f,
@@ -53,12 +48,15 @@ fn main() {
         return;
     }
 
-    bus.borrow_mut()
-        .register_region(0x2000..=0x2007, Rc::new(RefCell::new(PPUMock {})));
-
     loop {
         match cpu.tick() {
-            Ok(_cycle_count) => {}
+            Ok(cycle_count) => {
+                for _ in 0..(cycle_count * 3) {
+                    if ppu.borrow_mut().tick() {
+                        cpu.generate_nmi();
+                    }
+                }
+            }
             Err(e) => {
                 eprintln!("{}", e);
                 break;

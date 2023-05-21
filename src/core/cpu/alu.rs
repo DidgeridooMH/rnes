@@ -35,8 +35,11 @@ impl CPU {
     pub fn run_alu_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode)?;
         let (address, page_cross) = self.get_address(address_mode)?;
-        let operand = self.bus.borrow_mut().read_byte(address)?;
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
+        let mut operand = 0;
+        if opcode_group != OpcodeGroup::Sta {
+            operand = self.bus.borrow_mut().read_byte(address)?;
+        }
 
         if self.show_ops {
             print!(" {:?}({:X}) {:X}", address_mode, address, operand);
