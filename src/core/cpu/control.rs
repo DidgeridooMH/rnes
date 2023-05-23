@@ -156,6 +156,7 @@ impl CPU {
     }
 
     fn rti(&mut self) -> OpcodeResult {
+        println!("RTI");
         self.p.0 = self.pop_byte()?;
         self.p.set_b(0);
         self.pc = self.pop_word()?;

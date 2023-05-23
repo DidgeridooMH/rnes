@@ -53,14 +53,18 @@ impl RomHeader {
     }
 }
 
-pub fn load_rom(rom: &[u8], bus: &Rc<RefCell<Bus>>) -> Result<(), String> {
+pub fn load_rom(
+    rom: &[u8],
+    bus: &Rc<RefCell<Bus>>,
+    vram_bus: &Rc<RefCell<Bus>>,
+) -> Result<(), String> {
     let header = match RomHeader::from_slice(&rom[0..16]) {
         Ok(h) => h,
         Err(e) => return Err(e),
     };
 
     match header.mapper {
-        Mapper::Nrom => Nrom::register(&rom[16..], bus),
+        Mapper::Nrom => Nrom::register(&rom[16..], bus, vram_bus),
         _ => return Err("Unsupported mapper".into()),
     }
 

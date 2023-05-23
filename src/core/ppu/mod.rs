@@ -202,6 +202,17 @@ impl Addressable for PPU {
                     self.w = false;
                 }
             }
+            0x2006 => {
+                if !self.w {
+                    self.t.0 = ((data as u16) << 8) | (self.t.0 & 0xFF);
+                    self.w = true;
+                } else {
+                    self.t.0 = (data as u16) | (self.t.0 & 0xFF00);
+                    self.v.0 = self.t.0;
+                    self.w = false;
+                }
+            }
+            0x2007 => {}
             0x4014 => {
                 // TODO: Implement OAM DMA
             }

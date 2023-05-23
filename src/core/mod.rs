@@ -39,11 +39,14 @@ impl fmt::Display for CoreError {
 pub struct Nes {
     cpu: CPU,
     ppu: Rc<RefCell<PPU>>,
+    cycle_count: usize,
 }
 
 impl Nes {
     pub fn new(rom_file: &str, show_ops: bool) -> Result<Self, String> {
         let bus = Bus::new();
+        let vram_bus = Bus::new();
+
         let mut cpu = CPU::new(&bus);
         cpu.set_show_ops(show_ops);
 
@@ -71,18 +74,24 @@ impl Nes {
             }
         };
 
-        if let Err(e) = load_rom(&rom_file, &bus) {
+        if let Err(e) = load_rom(&rom_file, &bus, &vram_bus) {
             return Err(format!("Error while loading rom: {e}"));
         }
 
-        Ok(Self { cpu, ppu })
+        Ok(Self {
+            cpu,
+            ppu,
+            cycle_count: 0,
+        })
     }
 
     pub fn emulate(&mut self) -> Result<(), String> {
         match self.cpu.tick() {
             Ok(cycle_count) => {
+                self.cycle_count += cycle_count;
                 for _ in 0..(cycle_count * 3) {
                     if self.ppu.borrow_mut().tick() {
+                        println!("NMI Hit: {}", self.cycle_count);
                         self.cpu.generate_nmi();
                     }
                 }
