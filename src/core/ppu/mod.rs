@@ -1,41 +1,8 @@
-use crate::core::Addressable;
-use bitfield::bitfield;
+use crate::core::{Addressable, Bus};
+use std::{cell::RefCell, rc::Rc};
 
 mod registers;
-
-bitfield! {
-    #[derive(Copy, Clone, PartialEq)]
-    pub struct PPUAddress(u16);
-    impl Debug;
-    #[inline]
-    pub coarse_x, set_coarse_x: 4, 0;
-    #[inline]
-    pub coarse_y, set_coarse_y: 9, 5;
-    #[inline]
-    pub nametable_select, set_nametable_select: 11, 10;
-    #[inline]
-    pub fine_y, set_fine_y: 14, 12;
-}
-
-bitfield! {
-    #[derive(Copy, Clone, PartialEq)]
-    struct PPUControl(u8);
-    impl Debug;
-    #[inline]
-    pub nametable, _: 1, 0;
-    #[inline]
-    pub vram_increment, _: 2;
-    #[inline]
-    pub sprite_pattern, _: 3;
-    #[inline]
-    pub background_pattern, _: 4;
-    #[inline]
-    pub sprite_size, _: 5;
-    #[inline]
-    pub master_slave, _: 6;
-    #[inline]
-    pub nmi_enable, _: 7;
-}
+use registers::{PPUAddress, PPUControl};
 
 const MAX_CYCLE: u32 = 340;
 const MAX_SCANLINE: u32 = 261;
@@ -46,21 +13,17 @@ pub struct PPU {
     w: bool,
     cycle: u32,
     scanline: u32,
-    increment_size: u32,
+    increment_size: u16,
     nmi_enabled: bool,
     vblank: bool,
     fine_x: u8,
     frame_count: u32,
-}
-
-impl Default for PPU {
-    fn default() -> Self {
-        Self::new()
-    }
+    internal_data_buffer: u8,
+    vram_bus: Rc<RefCell<Bus>>,
 }
 
 impl PPU {
-    pub fn new() -> Self {
+    pub fn new(bus: Rc<RefCell<Bus>>) -> Self {
         Self {
             t: PPUAddress(0),
             v: PPUAddress(0),
@@ -72,6 +35,8 @@ impl PPU {
             vblank: false,
             fine_x: 0,
             frame_count: 0,
+            internal_data_buffer: 0,
+            vram_bus: bus,
         }
     }
 
@@ -159,6 +124,23 @@ impl Addressable for PPU {
                 self.w = false;
                 (self.vblank as u8) << 7
             }
+            0x2007 => {
+                let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
+                if address < 0x3F00 {
+                    let result = self.internal_data_buffer;
+                    // TODO: handle error
+                    self.internal_data_buffer = read_byte;
+                    read_byte = result;
+                } else {
+                    self.internal_data_buffer = self
+                        .vram_bus
+                        .borrow_mut()
+                        .read_byte((self.v.0 % 0x1000) + 0x2000)
+                        .unwrap();
+                }
+                self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
+                read_byte
+            }
             _ => {
                 unimplemented!("Reading from VRAM at {address:X}");
             }
@@ -212,7 +194,10 @@ impl Addressable for PPU {
                     self.w = false;
                 }
             }
-            0x2007 => {}
+            0x2007 => {
+                self.vram_bus.borrow_mut().write_byte(address, data);
+                self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
+            }
             0x4014 => {
                 // TODO: Implement OAM DMA
             }

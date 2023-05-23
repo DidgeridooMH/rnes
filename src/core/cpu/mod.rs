@@ -70,10 +70,6 @@ impl CPU {
             self.interrupt = None;
         }
 
-        if self.pc == 0xF211 {
-            println!("PPU COPY = {:X}", self.x);
-        }
-
         let opcode = self.bus.borrow_mut().read_byte(self.pc)?;
         if self.show_ops {
             print!(
@@ -156,7 +152,6 @@ impl CPU {
     }
 
     fn push_byte(&mut self, data: u8) -> Result<(), CoreError> {
-        //println!("    ++ P${:X} S${:X}", self.pc, self.sp);
         self.bus
             .borrow_mut()
             .write_byte(0x100 + self.sp as u16, data)?;
@@ -166,7 +161,6 @@ impl CPU {
 
     fn pop_byte(&mut self) -> Result<u8, CoreError> {
         self.sp += 1;
-        //println!("    -- P${:X} S${:X}", self.pc, self.sp);
         self.bus.borrow_mut().read_byte(0x100 + self.sp as u16)
     }
 

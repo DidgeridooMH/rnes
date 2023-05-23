@@ -2,7 +2,21 @@ use bitfield::bitfield;
 
 bitfield! {
     #[derive(Copy, Clone, PartialEq)]
-    struct PPUControl(u8);
+    pub struct PPUAddress(u16);
+    impl Debug;
+    #[inline]
+    pub coarse_x, set_coarse_x: 4, 0;
+    #[inline]
+    pub coarse_y, set_coarse_y: 9, 5;
+    #[inline]
+    pub nametable_select, set_nametable_select: 11, 10;
+    #[inline]
+    pub fine_y, set_fine_y: 14, 12;
+}
+
+bitfield! {
+    #[derive(Copy, Clone, PartialEq)]
+    pub struct PPUControl(u8);
     impl Debug;
     #[inline]
     pub nametable, _: 1, 0;

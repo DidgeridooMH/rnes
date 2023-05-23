@@ -50,7 +50,7 @@ impl Nes {
         let mut cpu = CPU::new(&bus);
         cpu.set_show_ops(show_ops);
 
-        let ppu = Rc::new(RefCell::new(PPU::new()));
+        let ppu = Rc::new(RefCell::new(PPU::new(vram_bus.clone())));
         bus.borrow_mut()
             .register_region(0x2000..=0x2007, ppu.clone());
         bus.borrow_mut()
