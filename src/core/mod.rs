@@ -181,9 +181,9 @@ impl Nes {
             Ok(cycle_count) => {
                 self.cycle_count += cycle_count;
                 for _ in 0..(cycle_count * 3) {
-                    if self.ppu.borrow_mut().tick() {
+                    if self.ppu.borrow_mut().tick(screen) {
                         self.cpu.generate_nmi();
-                        self.render_pattern_table(screen);
+                        //self.render_pattern_table(screen);
                     }
                 }
                 Ok(())

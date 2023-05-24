@@ -1,11 +1,19 @@
 use crate::core::{Addressable, Bus};
-use std::{cell::RefCell, rc::Rc};
+use crate::window::screen::{Pixel, ScreenBuffer};
+use crate::window::NATIVE_RESOLUTION;
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
 mod registers;
 use registers::{PPUAddress, PPUControl, PPUMask};
 
 mod vram;
 pub use vram::VRam;
+
+const NAMETABLE_BASE_ADDR: u16 = 0x2000;
 
 const MAX_CYCLE: u32 = 340;
 const MAX_SCANLINE: u32 = 261;
@@ -36,6 +44,43 @@ pub struct PPU {
     open_bus: u8,
     odd_frame: bool,
     mask: PPUMask,
+    shifter: PPUShift,
+    name_table_selector: u8,
+    pattern_low: u8,
+    pattern_high: u8,
+}
+
+#[derive(Default, Copy, Clone, Debug)]
+struct PPUShift {
+    pattern: [u16; 2],
+    palette: u16,
+}
+
+impl PPUShift {
+    pub fn load_pattern_low(&mut self, data: u8) {
+        self.pattern[0] = (self.pattern[0] & 0xFF00) | data as u16;
+    }
+
+    pub fn load_pattern_high(&mut self, data: u8) {
+        self.pattern[1] = (self.pattern[1] & 0xFF00) | data as u16;
+    }
+
+    pub fn load_palette(&mut self, data: u8) {
+        self.palette = (self.palette & 0xFFFC) | (data as u16 & 3);
+    }
+
+    pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
+        let low_bit = ((self.pattern[0] & (0x8000 >> fine_x)) > 0) as u8;
+        let high_bit = ((self.pattern[1] & (0x8000 >> fine_x)) > 0) as u8;
+
+        (high_bit << 1) | low_bit
+    }
+
+    pub fn shift(&mut self) {
+        self.pattern[0] <<= 1;
+        self.pattern[1] <<= 1;
+        self.palette <<= 2;
+    }
 }
 
 impl PPU {
@@ -57,6 +102,10 @@ impl PPU {
             open_bus: 0,
             odd_frame: false,
             mask: PPUMask(0),
+            shifter: PPUShift::default(),
+            name_table_selector: 0,
+            pattern_low: 0,
+            pattern_high: 0,
         }
     }
 
@@ -68,7 +117,7 @@ impl PPU {
         self.frame_count = 0;
     }
 
-    pub fn tick(&mut self) -> bool {
+    pub fn tick(&mut self, screen: &Arc<Mutex<Box<ScreenBuffer>>>) -> bool {
         let mut generate_nmi = false;
 
         if self.odd_frame && self.cycle == 0 && self.scanline == 0 {
@@ -85,8 +134,90 @@ impl PPU {
             self.reset = false;
         }
 
+        let fetching_cycle = (1..=257).contains(&self.cycle) || (321..=336).contains(&self.cycle);
+        let visible_scanline = (0..=239).contains(&self.scanline) || self.scanline == 261;
+
         if self.mask.show_background() || self.mask.show_sprite() {
-            self.update_address();
+            if fetching_cycle {
+                match self.cycle % 8 {
+                    1 => {
+                        self.name_table_selector = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte((self.v.0 & 0xFFF) + NAMETABLE_BASE_ADDR)
+                            .unwrap();
+                    }
+                    3 => {
+                        let x = self.v.coarse_x() / 4;
+                        let y = self.v.coarse_y() / 4;
+                        let nametable = self.v.nametable_select() << 10;
+                        let attibute_address = 0x23C0 | nametable | (y << 3) | x;
+                    }
+                    5 => {
+                        // TODO: Pattern choosing.
+                        let pattern = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte(
+                                0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y(),
+                            )
+                            .unwrap();
+                        self.shifter.load_pattern_low(pattern);
+                    }
+                    7 => {
+                        // TODO: Pattern choosing.
+                        let pattern = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte(
+                                0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y() + 8,
+                            )
+                            .unwrap();
+                        self.shifter.load_pattern_high(pattern);
+                    }
+                    _ => {}
+                }
+            }
+
+            if (1..=256).contains(&self.cycle) && self.scanline < 240 {
+                let color_index = self.shifter.get_pixel_color_index(self.fine_x);
+                screen.lock().unwrap().buffer[self.cycle as usize - 1
+                    + self.scanline as usize * NATIVE_RESOLUTION.width as usize] = match color_index
+                {
+                    3 => Pixel {
+                        r: 255,
+                        g: 0,
+                        b: 0,
+                        a: 255,
+                    },
+                    2 => Pixel {
+                        r: 0,
+                        g: 255,
+                        b: 0,
+                        a: 255,
+                    },
+                    1 => Pixel {
+                        r: 0,
+                        g: 0,
+                        b: 255,
+                        a: 255,
+                    },
+                    _ => Pixel {
+                        r: 0,
+                        g: 0,
+                        b: 0,
+                        a: 255,
+                    },
+                };
+            }
+
+            if fetching_cycle {
+                self.shifter.shift();
+            }
+
+            if visible_scanline {
+                self.update_address();
+            }
         }
 
         self.increment_cycle();
@@ -109,8 +240,7 @@ impl PPU {
 
     fn update_address(&mut self) {
         if self.cycle % 8 == 0
-            && (0..=255).contains(&self.cycle)
-            && (328..=340).contains(&self.cycle)
+            && ((1..=255).contains(&self.cycle) || (328..=336).contains(&self.cycle))
         {
             self.increment_x();
         } else if self.cycle == 256 {
@@ -121,7 +251,8 @@ impl PPU {
             self.v.set_nametable_select(
                 (self.v.nametable_select() & 0b10) | (self.t.nametable_select() & 0b01),
             );
-        } else if (280..=304).contains(&self.cycle) {
+        } else if (280..=304).contains(&self.cycle) && self.scanline == 261 {
+            self.v.set_fine_y(self.t.fine_y());
             self.v.set_coarse_y(self.t.coarse_y());
             self.v.set_nametable_select(
                 (self.v.nametable_select() & 0b01) | (self.t.nametable_select() & 0b10),
