@@ -85,10 +85,11 @@ impl CPU {
     }
 
     fn adc(&mut self, operand: u8) {
+        let carry = self.p.c() as u8;
         self.p.set_c(self.a.checked_add(operand).is_none());
         self.p
             .set_v((self.a as i8).checked_add(operand as i8).is_none());
-        self.a = self.a.wrapping_add(operand);
+        self.a = self.a.wrapping_add(carry.wrapping_add(operand));
         self.set_nz_flags(self.a);
     }
 
@@ -109,7 +110,7 @@ impl CPU {
                 Some(r) => r.checked_sub(1 - (self.p.c() as i8)).is_none(),
                 None => true,
             });
-        self.a = self.a.wrapping_sub(operand);
+        self.a = self.a.wrapping_sub(operand.wrapping_sub(self.p.c() as u8));
         self.set_nz_flags(self.a);
         self.p.set_c(!self.p.v());
     }

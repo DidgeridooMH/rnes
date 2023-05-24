@@ -40,8 +40,8 @@ impl CPU {
         Self {
             bus: bus.clone(),
             a: 0,
-            x: 0xFF,
-            y: 0xB7,
+            x: 0,
+            y: 0,
             sp: 0xFFu8,
             pc: 0xFFFCu16,
             p: StatusRegister(0),

@@ -33,3 +33,25 @@ bitfield! {
     #[inline]
     pub nmi_enable, _: 7;
 }
+
+bitfield! {
+    #[derive(Copy, Clone, PartialEq)]
+    pub struct PPUMask(u8);
+    impl Debug;
+    #[inline]
+    pub greyscale, _: 0;
+    #[inline]
+    pub show_background_left, _: 1;
+    #[inline]
+    pub show_sprite_left, _: 2;
+    #[inline]
+    pub show_background, _: 3;
+    #[inline]
+    pub show_sprite, _: 4;
+    #[inline]
+    pub emphasize_red, _: 5;
+    #[inline]
+    pub emphasize_green, _: 6;
+    #[inline]
+    pub emphasize_blue, _: 7;
+}

@@ -2,13 +2,22 @@ use crate::core::{Addressable, Bus};
 use std::{cell::RefCell, rc::Rc};
 
 mod registers;
-use registers::{PPUAddress, PPUControl};
+use registers::{PPUAddress, PPUControl, PPUMask};
 
 mod vram;
-use vram::VRam;
+pub use vram::VRam;
 
 const MAX_CYCLE: u32 = 340;
 const MAX_SCANLINE: u32 = 261;
+const PPUCTRL: u16 = 0x2000;
+const PPUMASK: u16 = 0x2001;
+const PPUSTATUS: u16 = 0x2002;
+const OAMADDR: u16 = 0x2003;
+const OAMDATA: u16 = 0x2004;
+const PPUSCROLL: u16 = 0x2005;
+const PPUADDR: u16 = 0x2006;
+const PPUDATA: u16 = 0x2007;
+const OAMDMA: u16 = 0x4014;
 
 pub struct PPU {
     t: PPUAddress,
@@ -19,32 +28,35 @@ pub struct PPU {
     increment_size: u16,
     nmi_enabled: bool,
     vblank: bool,
+    reset: bool,
     fine_x: u8,
     frame_count: u32,
     internal_data_buffer: u8,
     vram_bus: Rc<RefCell<Bus>>,
     open_bus: u8,
+    odd_frame: bool,
+    mask: PPUMask,
 }
 
 impl PPU {
     pub fn new(bus: Rc<RefCell<Bus>>) -> Self {
-        bus.borrow_mut()
-            .register_region(0x2000..=0x3FFF, Rc::new(RefCell::new(VRam::new())));
-
         Self {
             t: PPUAddress(0),
             v: PPUAddress(0),
             w: false,
             cycle: 0,
-            scanline: 0,
+            scanline: 261,
             increment_size: 1,
-            nmi_enabled: true,
-            vblank: false,
+            nmi_enabled: false,
+            vblank: true,
+            reset: true,
             fine_x: 0,
             frame_count: 0,
             internal_data_buffer: 0,
             vram_bus: bus,
             open_bus: 0,
+            odd_frame: false,
+            mask: PPUMask(0),
         }
     }
 
@@ -58,6 +70,11 @@ impl PPU {
 
     pub fn tick(&mut self) -> bool {
         let mut generate_nmi = false;
+
+        if self.odd_frame && self.cycle == 0 && self.scanline == 0 {
+            self.cycle = 1;
+        }
+
         if self.cycle == 1 && self.scanline == 241 {
             self.vblank = true;
             if self.nmi_enabled {
@@ -65,9 +82,12 @@ impl PPU {
             }
         } else if self.cycle == 1 && self.scanline == MAX_SCANLINE {
             self.vblank = false;
+            self.reset = false;
         }
 
-        self.update_address();
+        if self.mask.show_background() || self.mask.show_sprite() {
+            self.update_address();
+        }
 
         self.increment_cycle();
 
@@ -81,6 +101,7 @@ impl PPU {
             if self.scanline > MAX_SCANLINE {
                 self.scanline = 0;
                 self.frame_count += 1;
+                self.odd_frame = !self.odd_frame;
             }
             self.cycle = 0;
         }
@@ -129,14 +150,16 @@ impl PPU {
 
 impl Addressable for PPU {
     fn read_byte(&mut self, address: u16) -> u8 {
+        let address = address % 8 + 0x2000;
+
         self.open_bus = match address {
-            0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => self.open_bus,
+            PPUCTRL | PPUMASK | OAMADDR | PPUSCROLL | PPUADDR => self.open_bus,
             // TODO: Implement sprite overflow and sprite0 hit.
-            0x2002 => {
+            PPUSTATUS => {
                 self.w = false;
-                ((self.vblank as u8) << 7) | 0x40 | (self.open_bus & 0x1F)
+                ((self.vblank as u8) << 7) | (self.open_bus & 0x1F)
             }
-            0x2007 => {
+            PPUDATA => {
                 let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
                 if address < 0x3F00 {
                     std::mem::swap(&mut self.internal_data_buffer, &mut read_byte);
@@ -144,7 +167,7 @@ impl Addressable for PPU {
                     self.internal_data_buffer = self
                         .vram_bus
                         .borrow_mut()
-                        .read_byte((self.v.0 % 0x1000) + 0x2000)
+                        .read_byte(self.v.0 - 0x1000)
                         .unwrap();
                 }
                 self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
@@ -158,15 +181,28 @@ impl Addressable for PPU {
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
+        let address = address % 8 + 0x2000;
+
         self.open_bus = data;
+
+        if self.reset
+            && (address == PPUCTRL
+                || address == PPUMASK
+                || address == PPUSCROLL
+                || address == PPUADDR)
+        {
+            return;
+        }
+
         match address {
-            0x2000 => {
+            PPUCTRL => {
+                if self.reset {
+                    return;
+                }
+
                 // TODO: Implement rest of flags.
                 let data = PPUControl(data);
                 self.nmi_enabled = data.nmi_enable();
-                if self.nmi_enabled {
-                    println!("NMI Enabled");
-                }
                 // master/slave - 6
                 // sprite_size - 5
                 // background PTA - 4 - 0000/1000
@@ -178,16 +214,16 @@ impl Addressable for PPU {
                 }
                 self.t.set_nametable_select(data.nametable().into());
             }
-            0x2001 => {
-                // TODO: Implement masking.
+            PPUMASK => {
+                self.mask.0 = data;
             }
-            0x2003 => {
+            OAMADDR => {
                 // TODO: Implement OAMADDR
             }
-            0x2004 => {
+            OAMDATA => {
                 // TODO: Implement OAMDATA
             }
-            0x2005 => {
+            PPUSCROLL => {
                 if !self.w {
                     self.t.set_coarse_x((data >> 3).into());
                     self.fine_x = data & 0b111;
@@ -198,7 +234,7 @@ impl Addressable for PPU {
                     self.w = false;
                 }
             }
-            0x2006 => {
+            PPUADDR => {
                 if !self.w {
                     self.t.0 = ((data as u16) << 8) | (self.t.0 & 0xFF);
                     self.w = true;
@@ -208,14 +244,14 @@ impl Addressable for PPU {
                     self.w = false;
                 }
             }
-            0x2007 => {
+            PPUDATA => {
                 self.vram_bus
                     .borrow_mut()
-                    .write_byte(address, data)
+                    .write_byte(self.v.0, data)
                     .unwrap();
                 self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
             }
-            0x4014 => {
+            OAMDMA => {
                 // TODO: Implement OAM DMA
             }
             _ => {

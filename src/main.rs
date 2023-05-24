@@ -12,6 +12,8 @@ struct Args {
     rom: String,
     #[arg(long)]
     show_ops: bool,
+    #[arg(long)]
+    show_header: bool,
 }
 
 #[tokio::main]
@@ -30,7 +32,7 @@ async fn main() {
     let nes_screen = screen.clone();
     tokio::spawn(async move {
         let cli = Args::parse();
-        let mut nes = Nes::new(&cli.rom, cli.show_ops).unwrap();
+        let mut nes = Nes::new(&cli.rom, cli.show_ops, cli.show_header).unwrap();
         loop {
             if let Err(e) = nes.emulate(&nes_screen) {
                 eprintln!("Problem with emulation: {e}");

@@ -56,7 +56,7 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn new(rom_file: &str, show_ops: bool) -> Result<Self, String> {
+    pub fn new(rom_file: &str, show_ops: bool, show_header: bool) -> Result<Self, String> {
         let bus = Bus::new();
         let vram_bus = Bus::new();
 
@@ -65,7 +65,7 @@ impl Nes {
 
         let ppu = Rc::new(RefCell::new(PPU::new(vram_bus.clone())));
         bus.borrow_mut()
-            .register_region(0x2000..=0x2007, ppu.clone());
+            .register_region(0x2000..=0x3FFF, ppu.clone());
         bus.borrow_mut()
             .register_region(0x4014..=0x4014, ppu.clone());
 
@@ -76,9 +76,7 @@ impl Nes {
         let apu = Rc::new(RefCell::new(APU {}));
         bus.borrow_mut()
             .register_region(0x4000..=0x4013, apu.clone());
-        bus.borrow_mut()
-            .register_region(0x4015..=0x4015, apu.clone());
-        bus.borrow_mut().register_region(0x4017..=0x4017, apu);
+        bus.borrow_mut().register_region(0x4015..=0x4015, apu);
 
         let rom_file = match fs::read(rom_file) {
             Ok(f) => f,
@@ -87,8 +85,20 @@ impl Nes {
             }
         };
 
-        if let Err(e) = load_rom(&rom_file, &bus, &vram_bus) {
-            return Err(format!("Error while loading rom: {e}"));
+        let rom_info = match load_rom(&rom_file, &bus, &vram_bus) {
+            Ok(i) => i,
+            Err(e) => {
+                return Err(format!("Error while loading rom: {e}"));
+            }
+        };
+
+        vram_bus.borrow_mut().register_region(
+            0x2000..=0x3FFF,
+            Rc::new(RefCell::new(VRam::new(rom_info.mirroring))),
+        );
+
+        if show_header {
+            println!("{:?}", rom_info);
         }
 
         Ok(Self {
@@ -159,7 +169,7 @@ impl Nes {
     }
 
     pub fn emulate(&mut self, screen: &Arc<Mutex<Box<ScreenBuffer>>>) -> Result<(), String> {
-        if self.frame_count_start.elapsed() > Duration::from_secs(2) {
+        if self.frame_count_start.elapsed() > Duration::from_secs(1) {
             let frame_count = self.ppu.borrow().frame_count();
             let fps = frame_count as f32 / self.frame_count_start.elapsed().as_secs_f32();
             println!("FPS: {fps} {} {}", frame_count, self.cycle_count);

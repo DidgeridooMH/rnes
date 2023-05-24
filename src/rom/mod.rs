@@ -4,13 +4,13 @@ pub use nrom::*;
 use crate::core::Bus;
 use std::{cell::RefCell, rc::Rc};
 
-#[derive(Debug)]
-enum MirrorArrangement {
+#[derive(Copy, Clone, Debug)]
+pub enum MirrorArrangement {
     Horizontal,
     Vertical,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Mapper {
     Nrom,
     Unsupported,
@@ -30,7 +30,7 @@ pub struct RomHeader {
     prg: u8,
     chr: u8,
     battery: bool,
-    mirroring: MirrorArrangement,
+    pub mirroring: MirrorArrangement,
     pub mapper: Mapper,
 }
 
@@ -57,7 +57,7 @@ pub fn load_rom(
     rom: &[u8],
     bus: &Rc<RefCell<Bus>>,
     vram_bus: &Rc<RefCell<Bus>>,
-) -> Result<(), String> {
+) -> Result<RomHeader, String> {
     let header = match RomHeader::from_slice(&rom[0..16]) {
         Ok(h) => h,
         Err(e) => return Err(e),
@@ -68,5 +68,5 @@ pub fn load_rom(
         _ => return Err("Unsupported mapper".into()),
     }
 
-    Ok(())
+    Ok(header)
 }
