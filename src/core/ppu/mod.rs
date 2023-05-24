@@ -10,6 +10,8 @@ use std::{
 mod registers;
 use registers::{PPUAddress, PPUControl, PPUMask};
 
+mod palette;
+
 mod vram;
 pub use vram::VRam;
 
@@ -26,6 +28,42 @@ const PPUSCROLL: u16 = 0x2005;
 const PPUADDR: u16 = 0x2006;
 const PPUDATA: u16 = 0x2007;
 const OAMDMA: u16 = 0x4014;
+
+#[derive(Default, Copy, Clone, Debug)]
+struct PPUShift {
+    pattern: [u16; 2],
+    attribute: u32,
+}
+
+impl PPUShift {
+    pub fn load_pattern_low(&mut self, data: u8) {
+        self.pattern[0] = (self.pattern[0] & 0xFF00) | data as u16;
+    }
+
+    pub fn load_pattern_high(&mut self, data: u8) {
+        self.pattern[1] = (self.pattern[1] & 0xFF00) | data as u16;
+    }
+
+    pub fn load_attribute(&mut self, data: u8) {
+        for i in 0..8 {
+            self.attribute |= (data as u32) << (i * 2);
+        }
+    }
+
+    pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
+        let low_bit = ((self.pattern[0] & (0x8000 >> fine_x)) > 0) as u8;
+        let high_bit = ((self.pattern[1] & (0x8000 >> fine_x)) > 0) as u8;
+        let attribute = (self.attribute >> 30) as u8;
+
+        (attribute << 2) | (high_bit << 1) | low_bit
+    }
+
+    pub fn shift(&mut self) {
+        self.pattern[0] <<= 1;
+        self.pattern[1] <<= 1;
+        self.attribute <<= 2;
+    }
+}
 
 pub struct PPU {
     t: PPUAddress,
@@ -48,39 +86,7 @@ pub struct PPU {
     name_table_selector: u8,
     pattern_low: u8,
     pattern_high: u8,
-}
-
-#[derive(Default, Copy, Clone, Debug)]
-struct PPUShift {
-    pattern: [u16; 2],
-    palette: u16,
-}
-
-impl PPUShift {
-    pub fn load_pattern_low(&mut self, data: u8) {
-        self.pattern[0] = (self.pattern[0] & 0xFF00) | data as u16;
-    }
-
-    pub fn load_pattern_high(&mut self, data: u8) {
-        self.pattern[1] = (self.pattern[1] & 0xFF00) | data as u16;
-    }
-
-    pub fn load_palette(&mut self, data: u8) {
-        self.palette = (self.palette & 0xFFFC) | (data as u16 & 3);
-    }
-
-    pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
-        let low_bit = ((self.pattern[0] & (0x8000 >> fine_x)) > 0) as u8;
-        let high_bit = ((self.pattern[1] & (0x8000 >> fine_x)) > 0) as u8;
-
-        (high_bit << 1) | low_bit
-    }
-
-    pub fn shift(&mut self) {
-        self.pattern[0] <<= 1;
-        self.pattern[1] <<= 1;
-        self.palette <<= 2;
-    }
+    attribute: u8,
 }
 
 impl PPU {
@@ -106,6 +112,7 @@ impl PPU {
             name_table_selector: 0,
             pattern_low: 0,
             pattern_high: 0,
+            attribute: 0,
         }
     }
 
@@ -143,6 +150,7 @@ impl PPU {
                     1 => {
                         self.shifter.load_pattern_low(self.pattern_low);
                         self.shifter.load_pattern_high(self.pattern_high);
+                        self.shifter.load_attribute(self.attribute);
 
                         self.name_table_selector = self
                             .vram_bus
@@ -153,8 +161,16 @@ impl PPU {
                     3 => {
                         let x = self.v.coarse_x() / 4;
                         let y = self.v.coarse_y() / 4;
-                        let nametable = self.v.nametable_select() << 10;
-                        let attibute_address = 0x23C0 | nametable | (y << 3) | x;
+                        let nametable = self.v.nametable_select();
+                        let attribute_address = 0x23C0 | (nametable * 0x400) | (y << 3) | x;
+                        self.attribute = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte(attribute_address)
+                            .unwrap();
+                        self.attribute >>=
+                            (self.v.coarse_x() & 0b10) | ((self.v.coarse_y() & 0b10) << 1);
+                        self.attribute &= 0b11;
                     }
                     5 => {
                         // TODO: Pattern choosing.
@@ -182,34 +198,14 @@ impl PPU {
 
             if (1..=256).contains(&self.cycle) && self.scanline < 240 {
                 let color_index = self.shifter.get_pixel_color_index(self.fine_x);
+                let color = self
+                    .vram_bus
+                    .borrow_mut()
+                    .read_byte(0x3F00 + color_index as u16)
+                    .unwrap();
                 screen.lock().unwrap().buffer[self.cycle as usize - 1
-                    + self.scanline as usize * NATIVE_RESOLUTION.width as usize] = match color_index
-                {
-                    3 => Pixel {
-                        r: 255,
-                        g: 0,
-                        b: 0,
-                        a: 255,
-                    },
-                    2 => Pixel {
-                        r: 0,
-                        g: 255,
-                        b: 0,
-                        a: 255,
-                    },
-                    1 => Pixel {
-                        r: 0,
-                        g: 0,
-                        b: 255,
-                        a: 255,
-                    },
-                    _ => Pixel {
-                        r: 0,
-                        g: 0,
-                        b: 0,
-                        a: 255,
-                    },
-                };
+                    + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
+                    Pixel::from_u32(palette::PALETTE[color as usize]);
             }
 
             if fetching_cycle {

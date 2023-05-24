@@ -9,6 +9,17 @@ pub struct Pixel {
     pub a: u8,
 }
 
+impl Pixel {
+    pub fn from_u32(pixel: u32) -> Self {
+        Self {
+            a: (pixel >> 24) as u8,
+            r: ((pixel >> 16) & 0xFF) as u8,
+            g: ((pixel >> 8) & 0xFF) as u8,
+            b: (pixel & 0xFF) as u8,
+        }
+    }
+}
+
 impl Default for Pixel {
     fn default() -> Self {
         Self {
