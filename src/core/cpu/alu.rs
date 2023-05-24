@@ -42,7 +42,11 @@ impl CPU {
         }
 
         if self.show_ops {
-            print!(" {:?}({:X}) {:X}", address_mode, address, operand);
+            if let AddressMode::Immediate = address_mode {
+                print!(" #${:02X}", operand);
+            } else {
+                print!(" ${:04X} = #${:02X}", address, operand);
+            }
         }
 
         match opcode_group {

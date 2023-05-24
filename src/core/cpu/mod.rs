@@ -8,6 +8,8 @@ mod status;
 #[cfg(test)]
 mod tests;
 
+use crate::core::cpu::opcodes::OPCODES;
+
 use self::{memory::InternalRam, status::StatusRegister};
 use super::{Addressable, Bus, CoreError};
 use std::{cell::RefCell, rc::Rc};
@@ -33,12 +35,13 @@ pub struct CPU {
 impl CPU {
     pub fn new(bus: &Rc<RefCell<Bus>>) -> Self {
         bus.borrow_mut()
-            .register_region(0x0u16..=0x2000u16, InternalRam::new());
+            .register_region(0x0u16..=0x1FFFu16, InternalRam::new());
+
         Self {
             bus: bus.clone(),
             a: 0,
-            x: 0,
-            y: 0,
+            x: 0xFF,
+            y: 0xB7,
             sp: 0xFFu8,
             pc: 0xFFFCu16,
             p: StatusRegister(0),
@@ -49,6 +52,10 @@ impl CPU {
 
     pub fn set_show_ops(&mut self, show: bool) {
         self.show_ops = show;
+
+        if show {
+            println!("RNES {} - Trace Log File", env!("CARGO_PKG_VERSION"));
+        }
     }
 
     pub fn generate_nmi(&mut self) {
@@ -73,10 +80,8 @@ impl CPU {
         let opcode = self.bus.borrow_mut().read_byte(self.pc)?;
         if self.show_ops {
             print!(
-                "0x{:X}: {}({:X})",
-                self.pc,
-                opcodes::OPCODES[opcode as usize],
-                opcode
+                "A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: {}",
+                self.a, self.x, self.y, self.sp, self.p, self.pc, OPCODES[opcode as usize]
             );
         }
         let cycles = match opcode % 4 {

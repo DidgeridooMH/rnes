@@ -4,6 +4,9 @@ use std::{cell::RefCell, rc::Rc};
 mod registers;
 use registers::{PPUAddress, PPUControl};
 
+mod vram;
+use vram::VRam;
+
 const MAX_CYCLE: u32 = 340;
 const MAX_SCANLINE: u32 = 261;
 
@@ -20,10 +23,14 @@ pub struct PPU {
     frame_count: u32,
     internal_data_buffer: u8,
     vram_bus: Rc<RefCell<Bus>>,
+    open_bus: u8,
 }
 
 impl PPU {
     pub fn new(bus: Rc<RefCell<Bus>>) -> Self {
+        bus.borrow_mut()
+            .register_region(0x2000..=0x3FFF, Rc::new(RefCell::new(VRam::new())));
+
         Self {
             t: PPUAddress(0),
             v: PPUAddress(0),
@@ -37,11 +44,16 @@ impl PPU {
             frame_count: 0,
             internal_data_buffer: 0,
             vram_bus: bus,
+            open_bus: 0,
         }
     }
 
     pub fn frame_count(&self) -> u32 {
         self.frame_count
+    }
+
+    pub fn reset_frame_count(&mut self) {
+        self.frame_count = 0;
     }
 
     pub fn tick(&mut self) -> bool {
@@ -117,20 +129,17 @@ impl PPU {
 
 impl Addressable for PPU {
     fn read_byte(&mut self, address: u16) -> u8 {
-        // TODO: Implement stale data.
-        match address {
+        self.open_bus = match address {
+            0x2000 | 0x2001 | 0x2003 | 0x2005 | 0x2006 => self.open_bus,
             // TODO: Implement sprite overflow and sprite0 hit.
             0x2002 => {
                 self.w = false;
-                (self.vblank as u8) << 7
+                ((self.vblank as u8) << 7) | 0x40 | (self.open_bus & 0x1F)
             }
             0x2007 => {
                 let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
                 if address < 0x3F00 {
-                    let result = self.internal_data_buffer;
-                    // TODO: handle error
-                    self.internal_data_buffer = read_byte;
-                    read_byte = result;
+                    std::mem::swap(&mut self.internal_data_buffer, &mut read_byte);
                 } else {
                     self.internal_data_buffer = self
                         .vram_bus
@@ -144,15 +153,20 @@ impl Addressable for PPU {
             _ => {
                 unimplemented!("Reading from VRAM at {address:X}");
             }
-        }
+        };
+        self.open_bus
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
+        self.open_bus = data;
         match address {
             0x2000 => {
                 // TODO: Implement rest of flags.
                 let data = PPUControl(data);
                 self.nmi_enabled = data.nmi_enable();
+                if self.nmi_enabled {
+                    println!("NMI Enabled");
+                }
                 // master/slave - 6
                 // sprite_size - 5
                 // background PTA - 4 - 0000/1000
@@ -195,7 +209,10 @@ impl Addressable for PPU {
                 }
             }
             0x2007 => {
-                self.vram_bus.borrow_mut().write_byte(address, data);
+                self.vram_bus
+                    .borrow_mut()
+                    .write_byte(address, data)
+                    .unwrap();
                 self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
             }
             0x4014 => {

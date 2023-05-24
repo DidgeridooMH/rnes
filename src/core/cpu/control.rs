@@ -118,9 +118,6 @@ impl CPU {
 
             // PC is incremented after memory fetch.
             let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as i8 + 2;
-            if self.show_ops {
-                print!(" {offset}");
-            }
             self.pc = (self.pc as i16 + offset as i16) as u16;
 
             if (prev_pc >> 8) != (self.pc >> 8) {
@@ -129,9 +126,6 @@ impl CPU {
                 Ok((0, 3))
             }
         } else {
-            if self.show_ops {
-                print!(" bnt");
-            }
             Ok((2, 2))
         }
     }
@@ -156,7 +150,6 @@ impl CPU {
     }
 
     fn rti(&mut self) -> OpcodeResult {
-        println!("RTI");
         self.p.0 = self.pop_byte()?;
         self.p.set_b(0);
         self.pc = self.pop_word()?;
@@ -177,10 +170,6 @@ impl CPU {
 
         let (address, _) = self.get_address(addr_mode)?;
         self.pc = address;
-
-        if self.show_ops {
-            print!(" {:?}({:X})", addr_mode, address);
-        }
 
         // Don't increment the PC so that jmps go direct.
         Ok((0, addr_mode.cycle_cost()))

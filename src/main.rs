@@ -2,6 +2,7 @@ use clap::Parser;
 use rnes::core::Nes;
 use rnes::window::screen::ScreenBuffer;
 use rnes::window::MainWindow;
+use std::sync::{Arc, Mutex};
 use winit::{event::*, event_loop::EventLoop};
 
 #[derive(Parser, Debug)]
@@ -24,13 +25,14 @@ async fn main() {
         }
     };
 
-    let screen = Box::<ScreenBuffer>::default();
+    let screen = Arc::new(Mutex::new(Box::<ScreenBuffer>::default()));
 
+    let nes_screen = screen.clone();
     tokio::spawn(async move {
         let cli = Args::parse();
         let mut nes = Nes::new(&cli.rom, cli.show_ops).unwrap();
         loop {
-            if let Err(e) = nes.emulate() {
+            if let Err(e) = nes.emulate(&nes_screen) {
                 eprintln!("Problem with emulation: {e}");
                 break;
             }
@@ -47,6 +49,7 @@ async fn main() {
             }
         }
         Event::RedrawRequested(window_id) if window_id == window.window.id() => {
+            let screen = screen.lock().unwrap();
             match window.render(&screen.buffer) {
                 Ok(_) => {}
                 Err(e) => {
