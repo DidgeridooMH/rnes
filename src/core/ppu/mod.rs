@@ -141,6 +141,9 @@ impl PPU {
             if fetching_cycle {
                 match self.cycle % 8 {
                     1 => {
+                        self.shifter.load_pattern_low(self.pattern_low);
+                        self.shifter.load_pattern_high(self.pattern_high);
+
                         self.name_table_selector = self
                             .vram_bus
                             .borrow_mut()
@@ -155,25 +158,23 @@ impl PPU {
                     }
                     5 => {
                         // TODO: Pattern choosing.
-                        let pattern = self
+                        self.pattern_low = self
                             .vram_bus
                             .borrow_mut()
                             .read_byte(
                                 0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y(),
                             )
                             .unwrap();
-                        self.shifter.load_pattern_low(pattern);
                     }
                     7 => {
                         // TODO: Pattern choosing.
-                        let pattern = self
+                        self.pattern_high = self
                             .vram_bus
                             .borrow_mut()
                             .read_byte(
                                 0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y() + 8,
                             )
                             .unwrap();
-                        self.shifter.load_pattern_high(pattern);
                     }
                     _ => {}
                 }
