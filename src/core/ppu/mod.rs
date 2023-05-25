@@ -1,5 +1,4 @@
 use crate::core::{Addressable, Bus};
-use crate::window::screen::{Pixel, ScreenBuffer};
 use crate::window::NATIVE_RESOLUTION;
 use std::{
     cell::RefCell,
@@ -87,6 +86,7 @@ pub struct PPU {
     pattern_low: u8,
     pattern_high: u8,
     attribute: u8,
+    internal_screen: Vec<u32>,
 }
 
 impl PPU {
@@ -113,6 +113,11 @@ impl PPU {
             pattern_low: 0,
             pattern_high: 0,
             attribute: 0,
+            internal_screen: vec![
+                0u32;
+                NATIVE_RESOLUTION.width as usize
+                    * NATIVE_RESOLUTION.height as usize
+            ],
         }
     }
 
@@ -124,7 +129,11 @@ impl PPU {
         self.frame_count = 0;
     }
 
-    pub fn tick(&mut self, screen: &Arc<Mutex<Box<ScreenBuffer>>>) -> bool {
+    pub fn screen(&self) -> &Vec<u32> {
+        &self.internal_screen
+    }
+
+    pub fn tick(&mut self) -> bool {
         let mut generate_nmi = false;
 
         if self.odd_frame && self.cycle == 0 && self.scanline == 0 {
@@ -203,9 +212,9 @@ impl PPU {
                     .borrow_mut()
                     .read_byte(0x3F00 + color_index as u16)
                     .unwrap();
-                screen.lock().unwrap().buffer[self.cycle as usize - 1
+                self.internal_screen[self.cycle as usize - 1
                     + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
-                    Pixel::from_u32(palette::PALETTE[color as usize]);
+                    palette::PALETTE[color as usize];
             }
 
             if fetching_cycle {

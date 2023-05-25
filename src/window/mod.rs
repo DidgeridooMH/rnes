@@ -8,9 +8,6 @@ use winit::{
     window::{Window, WindowBuilder, WindowButtons},
 };
 
-use self::screen::Pixel;
-
-pub mod screen;
 mod vertex;
 
 pub const NATIVE_RESOLUTION: PhysicalSize<u32> = PhysicalSize::new(256, 240);
@@ -232,7 +229,7 @@ impl MainWindow {
         }
     }
 
-    pub fn render(&self, screen_buffer: &[Pixel]) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&self, screen_buffer: &[u32]) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
 
         let view = output

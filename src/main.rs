@@ -1,7 +1,6 @@
 use clap::Parser;
-use rnes::core::Nes;
-use rnes::window::screen::ScreenBuffer;
 use rnes::window::MainWindow;
+use rnes::{core::Nes, window::NATIVE_RESOLUTION};
 use std::sync::{Arc, Mutex};
 use winit::{event::*, event_loop::EventLoop};
 
@@ -27,8 +26,11 @@ async fn main() {
         }
     };
 
-    let screen = Arc::new(Mutex::new(Box::<ScreenBuffer>::default()));
-
+    let screen = Arc::new(Mutex::new(vec![
+        0u32;
+        NATIVE_RESOLUTION.width as usize
+            * NATIVE_RESOLUTION.height as usize
+    ]));
     let nes_screen = screen.clone();
     tokio::spawn(async move {
         let cli = Args::parse();
@@ -52,7 +54,7 @@ async fn main() {
         }
         Event::RedrawRequested(window_id) if window_id == window.window.id() => {
             let screen = screen.lock().unwrap();
-            match window.render(&screen.buffer) {
+            match window.render(&screen) {
                 Ok(_) => {}
                 Err(e) => {
                     eprintln!("{:?}", e);
