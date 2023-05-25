@@ -82,6 +82,8 @@ pub struct PPU {
     odd_frame: bool,
     mask: PPUMask,
     shifter: PPUShift,
+    background_table: u16,
+    sprite_table: u16,
     name_table_selector: u8,
     pattern_low: u8,
     pattern_high: u8,
@@ -109,6 +111,8 @@ impl PPU {
             odd_frame: false,
             mask: PPUMask(0),
             shifter: PPUShift::default(),
+            sprite_table: 0,
+            background_table: 0,
             name_table_selector: 0,
             pattern_low: 0,
             pattern_high: 0,
@@ -182,22 +186,25 @@ impl PPU {
                         self.attribute &= 0b11;
                     }
                     5 => {
-                        // TODO: Pattern choosing.
                         self.pattern_low = self
                             .vram_bus
                             .borrow_mut()
                             .read_byte(
-                                0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y(),
+                                self.background_table
+                                    + self.name_table_selector as u16 * 16
+                                    + self.v.fine_y(),
                             )
                             .unwrap();
                     }
                     7 => {
-                        // TODO: Pattern choosing.
                         self.pattern_high = self
                             .vram_bus
                             .borrow_mut()
                             .read_byte(
-                                0x1000 + self.name_table_selector as u16 * 16 + self.v.fine_y() + 8,
+                                self.background_table
+                                    + self.name_table_selector as u16 * 16
+                                    + self.v.fine_y()
+                                    + 8,
                             )
                             .unwrap();
                     }
@@ -342,8 +349,8 @@ impl Addressable for PPU {
                 self.nmi_enabled = data.nmi_enable();
                 // master/slave - 6
                 // sprite_size - 5
-                // background PTA - 4 - 0000/1000
-                // sprite PTA - 3
+                self.background_table = data.background_pattern() as u16 * 0x1000;
+                self.sprite_table = data.sprite_pattern() as u16 * 0x1000;
                 if data.vram_increment() {
                     self.increment_size = 32;
                 } else {
