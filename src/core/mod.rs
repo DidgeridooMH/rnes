@@ -61,8 +61,6 @@ impl Nes {
         let ppu = Rc::new(RefCell::new(PPU::new(vram_bus.clone())));
         bus.borrow_mut()
             .register_region(0x2000..=0x3FFF, ppu.clone());
-        bus.borrow_mut()
-            .register_region(0x4014..=0x4014, ppu.clone());
 
         let controller = Rc::new(RefCell::new(Controller::default()));
         bus.borrow_mut()

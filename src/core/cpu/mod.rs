@@ -20,6 +20,26 @@ enum Interrupt {
     Nmi,
 }
 
+#[derive(Copy, Clone, Default)]
+pub struct CPUOam {
+    address: Option<u16>,
+}
+
+impl Addressable for CPUOam {
+    fn read_byte(&mut self, _address: u16) -> u8 {
+        // Open bus
+        0
+    }
+
+    fn write_byte(&mut self, address: u16, data: u8) {
+        if address == 0x4014 {
+            self.address = Some((data as u16) << 8);
+        } else {
+            println!("(warn) Unexpected write to {address:X} in OAM CPU register");
+        }
+    }
+}
+
 pub struct CPU {
     bus: Rc<RefCell<Bus>>,
     pub a: u8,
@@ -30,12 +50,16 @@ pub struct CPU {
     pub p: StatusRegister,
     interrupt: Option<Interrupt>,
     show_ops: bool,
+    oam_signal: Rc<RefCell<CPUOam>>,
 }
 
 impl CPU {
     pub fn new(bus: &Rc<RefCell<Bus>>) -> Self {
         bus.borrow_mut()
             .register_region(0x0u16..=0x1FFFu16, InternalRam::new());
+        let oam = Rc::new(RefCell::new(CPUOam::default()));
+        bus.borrow_mut()
+            .register_region(0x4014u16..=0x4014u16, oam.clone());
 
         Self {
             bus: bus.clone(),
@@ -47,6 +71,7 @@ impl CPU {
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
             show_ops: false,
+            oam_signal: oam,
         }
     }
 
@@ -63,6 +88,17 @@ impl CPU {
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
+        let oam_signal = self.oam_signal.borrow().address;
+        if let Some(oam_address) = oam_signal {
+            let mut bus = self.bus.borrow_mut();
+            for i in 0..256 {
+                let oam_byte = bus.read_byte(oam_address + i).unwrap();
+                bus.write_byte(0x2004, oam_byte).unwrap();
+            }
+            self.oam_signal.borrow_mut().address = None;
+            return Ok(514);
+        }
+
         if let Some(interrupt) = self.interrupt {
             self.push_word(self.pc)?;
             let mut status = self.p;
