@@ -64,7 +64,7 @@ pub fn load_rom(
     };
 
     match header.mapper {
-        Mapper::Nrom => Nrom::register(&rom[16..], bus, vram_bus),
+        Mapper::Nrom => Nrom::register(&rom[16..], header.prg, bus, vram_bus),
         _ => return Err("Unsupported mapper".into()),
     }
 

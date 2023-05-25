@@ -11,19 +11,29 @@ struct NromChr {
 
 pub struct Nrom {
     prg_ram: [u8; PRG_RAM_SIZE],
-    prg_rom: [u8; PRG_ROM_SIZE],
+    prg_rom: Vec<u8>,
+    rom_banks: u8,
 }
 
 impl Nrom {
-    pub fn register(data: &[u8], bus: &Rc<RefCell<Bus>>, vram_bus: &Rc<RefCell<Bus>>) {
+    pub fn register(
+        data: &[u8],
+        rom_banks: u8,
+        bus: &Rc<RefCell<Bus>>,
+        vram_bus: &Rc<RefCell<Bus>>,
+    ) {
         let rom = Rc::new(RefCell::new(Self {
             prg_ram: [0; PRG_RAM_SIZE],
-            prg_rom: data[0..PRG_ROM_SIZE].try_into().unwrap(),
+            prg_rom: data[0..PRG_ROM_SIZE * rom_banks as usize]
+                .try_into()
+                .unwrap(),
+            rom_banks,
         }));
         bus.borrow_mut().register_region(0x6000..=0xFFFF, rom);
 
         let chr = Rc::new(RefCell::new(NromChr {
-            chr_rom: data[PRG_ROM_SIZE..(PRG_ROM_SIZE + CHR_ROM_SIZE)]
+            chr_rom: data[(PRG_ROM_SIZE * rom_banks as usize)
+                ..(PRG_ROM_SIZE * rom_banks as usize + CHR_ROM_SIZE)]
                 .try_into()
                 .unwrap(),
         }));
@@ -45,7 +55,14 @@ impl Addressable for Nrom {
     fn read_byte(&mut self, address: u16) -> u8 {
         match address {
             0x6000..=0x7FFF => self.prg_ram[(address as usize - 0x6000) % PRG_RAM_SIZE],
-            0x8000..=0xFFFF => self.prg_rom[(address as usize - 0x8000) % PRG_ROM_SIZE],
+            0x8000..=0xBFFF => self.prg_rom[address as usize - 0x8000],
+            0xC000..=0xFFFF => {
+                if self.rom_banks > 1 {
+                    self.prg_rom[address as usize - 0x8000]
+                } else {
+                    self.read_byte(address - PRG_ROM_SIZE as u16)
+                }
+            }
             _ => {
                 eprintln!("(warn) NROM read address 0x{address:X} that was unexpected.");
                 0
