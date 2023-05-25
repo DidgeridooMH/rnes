@@ -129,8 +129,8 @@ impl PPU {
         self.frame_count = 0;
     }
 
-    pub fn screen(&self) -> &Vec<u32> {
-        &self.internal_screen
+    pub fn blit(&self, display_screen: &mut [u32]) {
+        display_screen[..self.internal_screen.len()].copy_from_slice(&self.internal_screen[..]);
     }
 
     pub fn tick(&mut self) -> bool {

@@ -46,7 +46,6 @@ impl fmt::Display for CoreError {
 pub struct Nes {
     cpu: CPU,
     ppu: Rc<RefCell<PPU>>,
-    vram: Rc<RefCell<Bus>>,
     cycle_count: usize,
     frame_count_start: Instant,
 }
@@ -101,7 +100,6 @@ impl Nes {
             cpu,
             ppu,
             cycle_count: 0,
-            vram: vram_bus,
             frame_count_start: Instant::now(),
         })
     }
@@ -119,8 +117,9 @@ impl Nes {
             Ok(cycle_count) => {
                 self.cycle_count += cycle_count;
                 for _ in 0..(cycle_count * 3) {
-                    if self.ppu.borrow_mut().tick(screen) {
+                    if self.ppu.borrow_mut().tick() {
                         self.cpu.generate_nmi();
+                        self.ppu.borrow().blit(&mut screen.lock().unwrap());
                     }
                 }
                 Ok(())
