@@ -78,7 +78,7 @@ impl Nes {
             }
         };
 
-        let rom_info = match load_rom(&rom_file, &bus, &vram_bus) {
+        let rom_info = match load_rom(&rom_file, &bus, &vram_bus, show_header) {
             Ok(i) => i,
             Err(e) => {
                 return Err(format!("Error while loading rom: {e}"));
@@ -89,10 +89,6 @@ impl Nes {
             0x2000..=0x3FFF,
             Rc::new(RefCell::new(VRam::new(rom_info.mirroring))),
         );
-
-        if show_header {
-            println!("{:?}", rom_info);
-        }
 
         Ok(Self {
             cpu,

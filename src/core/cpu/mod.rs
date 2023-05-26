@@ -51,6 +51,7 @@ pub struct CPU {
     interrupt: Option<Interrupt>,
     show_ops: bool,
     oam_signal: Rc<RefCell<CPUOam>>,
+    cycles: usize,
 }
 
 impl CPU {
@@ -72,6 +73,7 @@ impl CPU {
             interrupt: Some(Interrupt::Reset),
             show_ops: false,
             oam_signal: oam,
+            cycles: 0,
         }
     }
 
@@ -96,6 +98,7 @@ impl CPU {
                 bus.write_byte(0x2004, oam_byte).unwrap();
             }
             self.oam_signal.borrow_mut().address = None;
+            self.cycles += 514;
             return Ok(514);
         }
 
@@ -116,8 +119,15 @@ impl CPU {
         let opcode = self.bus.borrow_mut().read_byte(self.pc)?;
         if self.show_ops {
             print!(
-                "A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: {}",
-                self.a, self.x, self.y, self.sp, self.p, self.pc, OPCODES[opcode as usize]
+                "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: {}",
+                self.cycles,
+                self.a,
+                self.x,
+                self.y,
+                self.sp,
+                self.p,
+                self.pc,
+                OPCODES[opcode as usize]
             );
         }
         let cycles = match opcode % 4 {
@@ -131,6 +141,8 @@ impl CPU {
         if self.show_ops {
             println!();
         }
+
+        self.cycles += cycles;
 
         Ok(cycles)
     }
@@ -264,8 +276,8 @@ impl AddressMode {
             | AddressMode::Absolute
             | AddressMode::AbsoluteX
             | AddressMode::AbsoluteY => 3,
-            AddressMode::IndirectX => 6,
-            AddressMode::IndirectY => 5,
+            AddressMode::IndirectX => 5,
+            AddressMode::IndirectY => 4,
             AddressMode::Indirect => 4,
         }
     }

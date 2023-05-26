@@ -34,7 +34,7 @@ impl OpcodeGroup {
 impl CPU {
     pub fn run_alu_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode)?;
-        let (address, page_cross) = self.get_address(address_mode)?;
+        let (address, mut page_cross) = self.get_address(address_mode)?;
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
         let mut operand = 0;
         if opcode_group != OpcodeGroup::Sta {
@@ -61,7 +61,17 @@ impl CPU {
         }
 
         let mut cycles = 1 + address_mode.cycle_cost();
-        if page_cross || opcode_group == OpcodeGroup::Sta {
+
+        if opcode_group == OpcodeGroup::Sta {
+            match address_mode {
+                AddressMode::AbsoluteX | AddressMode::AbsoluteY | AddressMode::IndirectY => {
+                    page_cross = true;
+                }
+                _ => {}
+            }
+        }
+
+        if page_cross {
             cycles += 1;
         }
 

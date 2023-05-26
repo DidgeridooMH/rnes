@@ -19,6 +19,7 @@ impl Nrom {
     pub fn register(
         data: &[u8],
         rom_banks: u8,
+        chr_banks: u8,
         bus: &Rc<RefCell<Bus>>,
         vram_bus: &Rc<RefCell<Bus>>,
     ) {
@@ -31,13 +32,22 @@ impl Nrom {
         }));
         bus.borrow_mut().register_region(0x6000..=0xFFFF, rom);
 
-        let chr = Rc::new(RefCell::new(NromChr {
-            chr_rom: data[(PRG_ROM_SIZE * rom_banks as usize)
-                ..(PRG_ROM_SIZE * rom_banks as usize + CHR_ROM_SIZE)]
-                .try_into()
-                .unwrap(),
-        }));
-        vram_bus.borrow_mut().register_region(0x0..=0x1FFF, chr);
+        if chr_banks > 0 {
+            let chr = Rc::new(RefCell::new(NromChr {
+                chr_rom: data[(PRG_ROM_SIZE * rom_banks as usize)
+                    ..(PRG_ROM_SIZE * rom_banks as usize + CHR_ROM_SIZE)]
+                    .try_into()
+                    .unwrap(),
+            }));
+            vram_bus.borrow_mut().register_region(0x0..=0x1FFF, chr);
+        } else {
+            vram_bus.borrow_mut().register_region(
+                0..=0x1FFF,
+                Rc::new(RefCell::new(NromChr {
+                    chr_rom: [0u8; CHR_ROM_SIZE],
+                })),
+            );
+        }
     }
 }
 

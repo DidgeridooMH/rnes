@@ -73,10 +73,12 @@ impl Addressable for PPU {
 
         self.open_bus = match address {
             PPUCTRL | PPUMASK | OAMADDR | PPUSCROLL | PPUADDR => self.open_bus,
-            // TODO: Implement sprite overflow and sprite0 hit.
             PPUSTATUS => {
                 self.w = false;
-                ((self.vblank as u8) << 7) | (self.open_bus & 0x1F)
+                ((self.vblank as u8) << 7)
+                    | ((self.sprite0_hit as u8) << 6)
+                    | ((self.sprite_overflow as u8) << 5)
+                    | (self.open_bus & 0x1F)
             }
             PPUDATA => {
                 let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();

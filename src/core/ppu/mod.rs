@@ -55,6 +55,29 @@ impl PPUShift {
     }
 }
 
+#[derive(Default, Copy, Clone, Debug)]
+struct SpriteShift {
+    pattern_low: u8,
+    pattern_high: u8,
+    attribute: u8,
+}
+
+impl SpriteShift {
+    pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
+        let low_bit = match (self.attribute & (1 << 6)) > 0 {
+            true => ((self.pattern_low & (0x80 >> fine_x)) > 0) as u8,
+            false => ((self.pattern_low & (1 << fine_x)) > 0) as u8,
+        };
+        let high_bit = match (self.attribute & (1 << 6)) > 0 {
+            true => ((self.pattern_high & (0x80 >> fine_x)) > 0) as u8,
+            false => ((self.pattern_high & (1 << fine_x)) > 0) as u8,
+        };
+        let attribute = self.attribute & 3;
+
+        (attribute << 2) | (high_bit << 1) | low_bit
+    }
+}
+
 pub struct PPU {
     t: PPUAddress,
     v: PPUAddress,
@@ -64,6 +87,8 @@ pub struct PPU {
     increment_size: u16,
     nmi_enabled: bool,
     vblank: bool,
+    sprite0_hit: bool,
+    sprite_overflow: bool,
     reset: bool,
     fine_x: u8,
     frame_count: u32,
@@ -82,7 +107,9 @@ pub struct PPU {
     internal_screen: Vec<u32>,
     oam_address: u8,
     primary_oam: [OamEntry; 64],
-    secondary_oam: [OamEntry; 8],
+    secondary_oam: [Option<OamEntry>; 8],
+    current_oam: [Option<OamEntry>; 8],
+    secondary_shifters: [SpriteShift; 8],
 }
 
 impl PPU {
@@ -96,6 +123,8 @@ impl PPU {
             increment_size: 1,
             nmi_enabled: false,
             vblank: true,
+            sprite0_hit: false,
+            sprite_overflow: true,
             reset: true,
             fine_x: 0,
             frame_count: 0,
@@ -118,7 +147,9 @@ impl PPU {
             ],
             oam_address: 0,
             primary_oam: [OamEntry::default(); 64],
-            secondary_oam: [OamEntry::default(); 8],
+            secondary_oam: [None; 8],
+            current_oam: [None; 8],
+            secondary_shifters: [SpriteShift::default(); 8],
         }
     }
 
@@ -143,23 +174,37 @@ impl PPU {
 
         if self.cycle == 1 && self.scanline == 241 {
             self.vblank = true;
+            println!("VBLANK ENABLE");
             if self.nmi_enabled {
+                println!("NMI HIT");
                 generate_nmi = true;
             }
         } else if self.cycle == 1 && self.scanline == MAX_SCANLINE {
+            println!("VBLANK DISABLE");
             self.vblank = false;
+            self.sprite_overflow = false;
+            self.sprite0_hit = false;
             self.reset = false;
         }
 
         let fetching_cycle = (1..=257).contains(&self.cycle) || (321..=336).contains(&self.cycle);
         let visible_scanline = (0..=239).contains(&self.scanline) || self.scanline == 261;
 
+        if visible_scanline {
+            if self.cycle == 1 {
+                self.secondary_oam = [None; 8];
+            } else if self.cycle == 65 {
+                self.evaluate_sprites();
+            } else if self.cycle == 261 {
+                self.current_oam.copy_from_slice(&self.secondary_oam);
+                self.load_sprite_shifts();
+            }
+        }
+
         if self.mask.show_background() || self.mask.show_sprite() {
             if fetching_cycle {
                 match self.cycle % 8 {
                     1 => {
-                        self.secondary_oam = [OamEntry::default(); 8];
-
                         self.shifter.load_pattern_low(self.pattern_low);
                         self.shifter.load_pattern_high(self.pattern_high);
                         self.shifter.load_attribute(self.attribute);
@@ -213,14 +258,30 @@ impl PPU {
 
             if (1..=256).contains(&self.cycle) && self.scanline < 240 {
                 let color_index = self.shifter.get_pixel_color_index(self.fine_x);
-                let color = self
-                    .vram_bus
-                    .borrow_mut()
-                    .read_byte(0x3F00 + color_index as u16)
-                    .unwrap();
+                let mut background_color = match self.mask.show_background() {
+                    true => self
+                        .vram_bus
+                        .borrow_mut()
+                        .read_byte(0x3F00 + color_index as u16)
+                        .unwrap(),
+                    false => 0,
+                };
+
+                let (sprite_color, sprite_index) = match self.mask.show_sprite() {
+                    true => self.get_sprite_pixel(),
+                    false => (0, 0),
+                };
+
+                if sprite_color > 0 {
+                    if background_color > 0 && sprite_index == 0 {
+                        self.sprite0_hit = true;
+                    }
+                    background_color = sprite_color;
+                }
+
                 self.internal_screen[self.cycle as usize - 1
                     + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
-                    palette::PALETTE[color as usize];
+                    palette::PALETTE[background_color as usize];
             }
 
             if fetching_cycle {
@@ -288,5 +349,72 @@ impl PPU {
             self.v.set_coarse_y(self.v.coarse_y() + 1);
         }
         self.v.set_fine_y(self.v.fine_y() + 1);
+    }
+
+    fn evaluate_sprites(&mut self) {
+        for entry in self.primary_oam {
+            let scanline = self.scanline as u8;
+            if scanline >= entry.y && scanline < entry.y + 8 {
+                match self.secondary_oam.iter().position(|&e| e.is_none()) {
+                    Some(index) => self.secondary_oam[index] = Some(entry),
+                    None => self.sprite_overflow = true,
+                }
+            }
+        }
+    }
+
+    fn load_sprite_shifts(&mut self) {
+        for i in 0..self.secondary_oam.len() {
+            if let Some(entry) = self.secondary_oam[i] {
+                let mut vram_bus = self.vram_bus.borrow_mut();
+                self.secondary_shifters[i] = SpriteShift {
+                    pattern_low: vram_bus
+                        .read_byte(
+                            self.sprite_table
+                                + entry.tile_index as u16 * 16
+                                + (self.scanline as u16 - entry.y as u16),
+                        )
+                        .unwrap(),
+                    pattern_high: vram_bus
+                        .read_byte(
+                            self.sprite_table
+                                + entry.tile_index as u16 * 16
+                                + (self.scanline as u16 - entry.y as u16)
+                                + 8,
+                        )
+                        .unwrap(),
+                    attribute: entry.attributes,
+                }
+            }
+        }
+    }
+
+    fn get_sprite_pixel(&self) -> (u8, usize) {
+        let x = (self.cycle - 1) as u8;
+        let mut pattern: Option<(u8, usize)> = None;
+        for i in 0..self.current_oam.len() {
+            if let Some(entry) = self.current_oam[i] {
+                if x >= entry.x && x < entry.x + 8 {
+                    let color_index = self.secondary_shifters[i].get_pixel_color_index(x - entry.x);
+                    if color_index > 0 && pattern.is_none() {
+                        pattern = Some((color_index, i));
+                    }
+                }
+            }
+        }
+
+        match pattern {
+            Some((p, i)) => {
+                let pixel = (
+                    self.vram_bus
+                        .borrow_mut()
+                        .read_byte(0x3F10 + p as u16)
+                        .unwrap(),
+                    i,
+                );
+                pixel
+            }
+            None => (0, 0),
+        }
     }
 }
