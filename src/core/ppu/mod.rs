@@ -252,16 +252,23 @@ impl PPU {
                     false => 0,
                 };
 
-                let (sprite_color, sprite_index) = match self.mask.show_sprite() {
+                let (sprite_color, sprite_index, behind_background) = match self.mask.show_sprite()
+                {
                     true => self.get_sprite_pixel(),
-                    false => (0, 0),
+                    false => (0, 0, false),
                 };
 
                 if sprite_color > 0 {
-                    if background_color > 0 && sprite_index == 0 {
+                    if color_index & 3 > 0 && sprite_index == 0 {
                         self.sprite0_hit = true;
                     }
-                    background_color = sprite_color;
+                    if !behind_background || color_index & 3 == 0 {
+                        background_color = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte(0x3F10 + sprite_color as u16)
+                            .unwrap();
+                    }
                 }
 
                 screen[self.cycle as usize - 1
@@ -374,32 +381,19 @@ impl PPU {
         }
     }
 
-    fn get_sprite_pixel(&self) -> (u8, usize) {
+    fn get_sprite_pixel(&self) -> (u8, usize, bool) {
         let x = (self.cycle - 1) as u8;
-        let mut pattern: Option<(u8, usize)> = None;
+        let mut pattern: Option<(u8, usize, bool)> = None;
         for i in 0..self.current_oam.len() {
             if let Some(entry) = self.current_oam[i] {
                 if x >= entry.x && x < entry.x + 8 {
                     let color_index = self.secondary_shifters[i].get_pixel_color_index(x - entry.x);
-                    if color_index > 0 && pattern.is_none() {
-                        pattern = Some((color_index, i));
+                    if (color_index & 3) > 0 && pattern.is_none() {
+                        pattern = Some((color_index, i, (entry.attributes & (1 << 5)) > 0));
                     }
                 }
             }
         }
-
-        match pattern {
-            Some((p, i)) => {
-                let pixel = (
-                    self.vram_bus
-                        .borrow_mut()
-                        .read_byte(0x3F10 + p as u16)
-                        .unwrap(),
-                    i,
-                );
-                pixel
-            }
-            None => (0, 0),
-        }
+        pattern.unwrap_or((0, 0, false))
     }
 }

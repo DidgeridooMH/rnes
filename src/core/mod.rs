@@ -97,7 +97,8 @@ impl Nes {
         if self.frame_count_start.elapsed() > Duration::from_secs(1) {
             let frame_count = self.ppu.borrow().frame_count();
             let fps = frame_count as f32 / self.frame_count_start.elapsed().as_secs_f32();
-            println!("FPS: {fps} {frame_count} {}", self.cycle_count);
+            // TODO: Add this to the window header.
+            //println!("FPS: {fps} {frame_count} {}", self.cycle_count);
             self.ppu.borrow_mut().reset_frame_count();
             self.frame_count_start = Instant::now();
         }
