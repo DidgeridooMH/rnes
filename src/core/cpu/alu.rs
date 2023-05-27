@@ -120,7 +120,7 @@ impl CPU {
                 Some(r) => r.checked_sub(1 - (self.p.c() as i8)).is_none(),
                 None => true,
             });
-        self.a = self.a.wrapping_sub(operand.wrapping_sub(self.p.c() as u8));
+        self.a = self.a.wrapping_sub(operand.wrapping_sub(!self.p.c() as u8));
         self.set_nz_flags(self.a);
         self.p.set_c(!self.p.v());
     }
