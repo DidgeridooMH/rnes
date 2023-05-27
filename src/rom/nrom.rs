@@ -56,8 +56,8 @@ impl Addressable for NromChr {
         self.chr_rom[address as usize]
     }
 
-    fn write_byte(&mut self, address: u16, _data: u8) {
-        eprintln!("(warn) NROM VRAM write to 0x{address:X} was unexpected.");
+    fn write_byte(&mut self, address: u16, data: u8) {
+        self.chr_rom[address as usize] = data;
     }
 }
 

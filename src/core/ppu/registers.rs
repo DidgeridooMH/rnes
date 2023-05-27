@@ -75,10 +75,12 @@ impl Addressable for PPU {
             PPUCTRL | PPUMASK | OAMADDR | PPUSCROLL | PPUADDR => self.open_bus,
             PPUSTATUS => {
                 self.w = false;
-                ((self.vblank as u8) << 7)
+                let result = ((self.vblank as u8) << 7)
                     | ((self.sprite0_hit as u8) << 6)
                     | ((self.sprite_overflow as u8) << 5)
-                    | (self.open_bus & 0x1F)
+                    | (self.open_bus & 0x1F);
+                self.vblank = false;
+                result
             }
             PPUDATA => {
                 let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
@@ -187,7 +189,7 @@ impl Addressable for PPU {
                 self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
             }
             _ => {
-                unimplemented!("Writing to VRAM at {address:X}");
+                println!("(warn) Wrote to read only port {address:X}");
             }
         }
     }

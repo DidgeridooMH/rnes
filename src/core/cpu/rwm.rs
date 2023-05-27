@@ -21,7 +21,8 @@ impl CPU {
             0xC6 | 0xD6 | 0xCE | 0xDE => self.dec(opcode)?,
             0xCA => self.dex()?,
             0xE6 | 0xF6 | 0xEE | 0xFE => self.inc(opcode)?,
-            0xEA => (1, 2),
+            0x1A | 0x3A | 0x5A | 0x7A | 0xDA | 0xFA => (1, 2),
+            0xEA => (1, 3),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 

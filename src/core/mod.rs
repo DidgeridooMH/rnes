@@ -85,6 +85,9 @@ impl Nes {
             Rc::new(RefCell::new(VRam::new(rom_info.mirroring))),
         );
 
+        println!("{}", bus.borrow());
+        println!("{}", vram_bus.borrow());
+
         Ok(Self {
             cpu,
             ppu,

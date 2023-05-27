@@ -1,5 +1,6 @@
 use super::CoreError;
 use std::cell::RefCell;
+use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
@@ -18,6 +19,18 @@ pub struct MemoryMapping {
 
 pub struct Bus {
     regions: Vec<MemoryMapping>,
+}
+
+impl Display for Bus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bus mappings: {{ ")?;
+        for r in &self.regions {
+            write!(f, "{:?}, ", r.region)?;
+        }
+        write!(f, " }}")?;
+
+        Ok(())
+    }
 }
 
 impl Bus {
