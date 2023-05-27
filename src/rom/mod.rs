@@ -1,6 +1,9 @@
 mod nrom;
 pub use nrom::*;
 
+mod mmc1;
+pub use mmc1::*;
+
 use crate::core::Bus;
 use std::{cell::RefCell, rc::Rc};
 
@@ -13,6 +16,7 @@ pub enum MirrorArrangement {
 #[derive(Copy, Clone, Debug)]
 pub enum Mapper {
     Nrom,
+    Mmc1,
     Unsupported,
 }
 
@@ -20,6 +24,7 @@ impl Mapper {
     pub fn from_id(id: u8) -> Self {
         match id {
             0 => Mapper::Nrom,
+            1 => Mapper::Mmc1,
             _ => Mapper::Unsupported,
         }
     }
@@ -68,6 +73,7 @@ pub fn load_rom(
 
     match header.mapper {
         Mapper::Nrom => Nrom::register(&rom[16..], header.prg, header.chr, bus, vram_bus),
+        Mapper::Mmc1 => Mmc1::register(&rom[16..], header.prg, header.chr, bus, vram_bus),
         _ => return Err("Unsupported mapper".into()),
     }
 

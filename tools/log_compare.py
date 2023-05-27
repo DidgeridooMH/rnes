@@ -27,7 +27,7 @@ def read_log(filename: str) -> list[Instruction]:
 
 rnes = read_log('output.log')
 print('RNES read: ', len(rnes))
-fceux = read_log('logs/02-immediate.log')
+fceux = read_log('logs/official.log')
 print('FCEUX read: ', len(fceux))
 
 for i in range(0, min(len(rnes), len(fceux))):
