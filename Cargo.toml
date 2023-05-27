@@ -7,7 +7,7 @@ edition = "2021"
 bitfield = "0.13.2"
 bytemuck = { version = "1.13.1", features = ["derive"] }
 clap = { version = "4.3.0", features = ["derive"] }
-tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros", "time"] }
 wgpu = "0.16.0"
 winit = "0.28.6"
 

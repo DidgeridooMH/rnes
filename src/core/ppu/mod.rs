@@ -103,7 +103,6 @@ pub struct PPU {
     pattern_low: u8,
     pattern_high: u8,
     attribute: u8,
-    internal_screen: Vec<u32>,
     oam_address: u8,
     primary_oam: [OamEntry; 64],
     secondary_oam: [Option<OamEntry>; 8],
@@ -139,11 +138,6 @@ impl PPU {
             pattern_low: 0,
             pattern_high: 0,
             attribute: 0,
-            internal_screen: vec![
-                0u32;
-                NATIVE_RESOLUTION.width as usize
-                    * NATIVE_RESOLUTION.height as usize
-            ],
             oam_address: 0,
             primary_oam: [OamEntry::default(); 64],
             secondary_oam: [None; 8],
@@ -159,12 +153,7 @@ impl PPU {
     pub fn reset_frame_count(&mut self) {
         self.frame_count = 0;
     }
-
-    pub fn blit(&self, display_screen: &mut [u32]) {
-        display_screen[..self.internal_screen.len()].copy_from_slice(&self.internal_screen[..]);
-    }
-
-    pub fn tick(&mut self) -> bool {
+    pub fn tick(&mut self, screen: &mut [u32]) -> bool {
         let mut generate_nmi = false;
 
         if self.odd_frame && self.cycle == 0 && self.scanline == 0 {
@@ -275,7 +264,7 @@ impl PPU {
                     background_color = sprite_color;
                 }
 
-                self.internal_screen[self.cycle as usize - 1
+                screen[self.cycle as usize - 1
                     + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
                     palette::PALETTE[background_color as usize];
             }

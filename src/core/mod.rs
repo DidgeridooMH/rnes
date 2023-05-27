@@ -13,12 +13,7 @@ pub use ppu::*;
 use crate::rom::load_rom;
 
 use std::time::{Duration, Instant};
-use std::{
-    cell::RefCell,
-    fmt, fs,
-    rc::Rc,
-    sync::{Arc, Mutex},
-};
+use std::{cell::RefCell, fmt, fs, rc::Rc};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum CoreError {
@@ -98,7 +93,7 @@ impl Nes {
         })
     }
 
-    pub fn emulate(&mut self, screen: &Arc<Mutex<Vec<u32>>>) -> Result<(), String> {
+    pub fn emulate(&mut self, cycles: usize, screen: &mut [u32]) -> Result<(), String> {
         if self.frame_count_start.elapsed() > Duration::from_secs(1) {
             let frame_count = self.ppu.borrow().frame_count();
             let fps = frame_count as f32 / self.frame_count_start.elapsed().as_secs_f32();
@@ -107,22 +102,26 @@ impl Nes {
             self.frame_count_start = Instant::now();
         }
 
-        match self.cpu.tick() {
-            Ok(cycle_count) => {
-                self.cycle_count += cycle_count;
-                for _ in 0..(cycle_count * 3) {
-                    if self.ppu.borrow_mut().tick() {
-                        self.cpu.generate_nmi();
-                        self.ppu.borrow().blit(&mut screen.lock().unwrap());
+        let mut used_cycles = 0;
+        while used_cycles < cycles {
+            match self.cpu.tick() {
+                Ok(cycle_count) => {
+                    self.cycle_count += cycle_count;
+                    used_cycles += cycle_count;
+                    for _ in 0..(cycle_count * 3) {
+                        if self.ppu.borrow_mut().tick(screen) {
+                            self.cpu.generate_nmi();
+                        }
                     }
                 }
-                Ok(())
-            }
-            Err(e) => {
-                self.cpu.dump();
-                println!("PPU Frame Count: {}", self.ppu.borrow().frame_count());
-                Err(e.to_string())
+                Err(e) => {
+                    self.cpu.dump();
+                    println!("PPU Frame Count: {}", self.ppu.borrow().frame_count());
+                    return Err(e.to_string());
+                }
             }
         }
+
+        Ok(())
     }
 }
