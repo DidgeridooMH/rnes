@@ -119,7 +119,7 @@ impl PPU {
             v: PPUAddress(0),
             w: false,
             cycle: 0,
-            scanline: 261,
+            scanline: 241,
             increment_size: 1,
             nmi_enabled: false,
             vblank: true,
@@ -174,13 +174,10 @@ impl PPU {
 
         if self.cycle == 1 && self.scanline == 241 {
             self.vblank = true;
-            println!("VBLANK ENABLE");
             if self.nmi_enabled {
-                println!("NMI HIT");
                 generate_nmi = true;
             }
         } else if self.cycle == 1 && self.scanline == MAX_SCANLINE {
-            println!("VBLANK DISABLE");
             self.vblank = false;
             self.sprite_overflow = false;
             self.sprite0_hit = false;

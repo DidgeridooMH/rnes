@@ -143,8 +143,9 @@ impl CPU {
         let operand = self.bus.borrow_mut().read_byte(address)?;
         let result = self.a & operand;
 
-        self.set_nz_flags(result);
-        self.p.set_v(result & 0x40u8 > 0);
+        self.p.set_z(result == 0);
+        self.p.set_v(operand & 0x40 > 0);
+        self.p.set_n(operand & 0x80 > 0);
 
         Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 1))
     }
