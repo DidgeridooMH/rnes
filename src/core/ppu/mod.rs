@@ -64,14 +64,13 @@ struct SpriteShift {
 
 impl SpriteShift {
     pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
-        let low_bit = match (self.attribute & (1 << 6)) > 0 {
-            true => ((self.pattern_low & (0x80 >> fine_x)) > 0) as u8,
-            false => ((self.pattern_low & (1 << fine_x)) > 0) as u8,
+        let bit_select = match (self.attribute & (1 << 6)) > 0 {
+            true => 1 << fine_x,
+            false => 0x80 >> fine_x,
         };
-        let high_bit = match (self.attribute & (1 << 6)) > 0 {
-            true => ((self.pattern_high & (0x80 >> fine_x)) > 0) as u8,
-            false => ((self.pattern_high & (1 << fine_x)) > 0) as u8,
-        };
+
+        let low_bit = ((self.pattern_low & bit_select) > 0) as u8;
+        let high_bit = ((self.pattern_high & bit_select) > 0) as u8;
         let attribute = self.attribute & 3;
 
         (attribute << 2) | (high_bit << 1) | low_bit
