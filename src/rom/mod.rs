@@ -29,7 +29,6 @@ impl Mapper {
 pub struct RomHeader {
     prg: u8,
     chr: u8,
-    battery: bool,
     pub mirroring: MirrorArrangement,
     pub mapper: Mapper,
 }
@@ -43,12 +42,11 @@ impl RomHeader {
         Ok(Self {
             prg: header[4],
             chr: header[5],
-            battery: header[6] & 2 > 0,
             mirroring: match header[6] & 1 > 0 {
                 true => MirrorArrangement::Horizontal,
                 false => MirrorArrangement::Vertical,
             },
-            mapper: Mapper::from_id((header[6] >> 4) & (header[7] & 0xF0u8)),
+            mapper: Mapper::from_id((header[6] >> 4) | (header[7] & 0xF0u8)),
         })
     }
 }
