@@ -38,6 +38,18 @@ async fn main() {
         } => {
             if window_id == window.window.id() {
                 window.input(event, control_flow);
+                if let WindowEvent::KeyboardInput {
+                    input:
+                        winit::event::KeyboardInput {
+                            virtual_keycode: Some(keycode),
+                            state,
+                            ..
+                        },
+                    ..
+                } = &event
+                {
+                    nes.controller.borrow_mut().input(keycode, state);
+                }
             }
         }
         Event::RedrawRequested(window_id) if window_id == window.window.id() => {

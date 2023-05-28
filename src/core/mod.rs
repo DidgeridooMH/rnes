@@ -43,6 +43,7 @@ pub struct Nes {
     ppu: Rc<RefCell<PPU>>,
     cycle_count: usize,
     frame_count_start: Instant,
+    pub controller: Rc<RefCell<Controller>>,
 }
 
 impl Nes {
@@ -59,7 +60,7 @@ impl Nes {
 
         let controller = Rc::new(RefCell::new(Controller::default()));
         bus.borrow_mut()
-            .register_region(0x4016..=0x4017, controller);
+            .register_region(0x4016..=0x4017, controller.clone());
 
         let apu = Rc::new(RefCell::new(APU {}));
         bus.borrow_mut()
@@ -91,6 +92,7 @@ impl Nes {
         Ok(Self {
             cpu,
             ppu,
+            controller,
             cycle_count: 0,
             frame_count_start: Instant::now(),
         })
