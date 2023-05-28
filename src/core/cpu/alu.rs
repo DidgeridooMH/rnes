@@ -96,10 +96,15 @@ impl CPU {
 
     fn adc(&mut self, operand: u8) {
         let carry = self.p.c() as u8;
-        self.p.set_c(self.a.checked_add(operand).is_none());
+        let (sum1, overflow1) = self.a.overflowing_add(operand);
+        let (sum2, overflow2) = sum1.overflowing_add(carry);
+
+        let a = self.a;
+        self.a = sum2;
+        self.p.set_c(overflow1 || overflow2);
         self.p
-            .set_v((self.a as i8).checked_add(operand as i8).is_none());
-        self.a = self.a.wrapping_add(carry.wrapping_add(operand));
+            .set_v((a ^ operand) & 0x80 != 0 && (a ^ self.a) & 0x80 != 0);
+
         self.set_nz_flags(self.a);
     }
 
@@ -115,13 +120,16 @@ impl CPU {
     }
 
     fn sbc(&mut self, operand: u8) {
+        let carry = self.p.c() as u8;
+        let (diff1, overflow1) = self.a.overflowing_sub(operand);
+        let (diff2, overflow2) = diff1.overflowing_sub(1 - carry);
+
+        let a = self.a;
+        self.a = diff2;
+        self.p.set_c(!(overflow1 || overflow2));
         self.p
-            .set_v(match (self.a as i8).checked_sub(operand as i8) {
-                Some(r) => r.checked_sub(1 - (self.p.c() as i8)).is_none(),
-                None => true,
-            });
-        self.a = self.a.wrapping_sub(operand.wrapping_sub(!self.p.c() as u8));
+            .set_v((a ^ operand) & 0x80 != 0 && (a ^ self.a) & 0x80 != 0);
+
         self.set_nz_flags(self.a);
-        self.p.set_c(!self.p.v());
     }
 }

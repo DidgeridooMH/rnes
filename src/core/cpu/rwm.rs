@@ -150,12 +150,21 @@ impl CPU {
         address_mode = match address_mode {
             AddressMode::IndirectX => AddressMode::Immediate,
             AddressMode::ZeroPageX => AddressMode::ZeroPageY,
+            AddressMode::AbsoluteX => AddressMode::AbsoluteY,
             _ => address_mode,
         };
 
         let (address, page_cross) = self.get_address(address_mode)?;
         self.x = self.bus.borrow_mut().read_byte(address)?;
         self.set_nz_flags(self.x);
+
+        if self.show_ops {
+            if let AddressMode::Immediate = address_mode {
+                print!(" #${:02X}", self.x);
+            } else {
+                print!(" ${:04X} = #${:02X}", address, self.x);
+            }
+        }
 
         Ok((
             address_mode.byte_code_size() + 1,

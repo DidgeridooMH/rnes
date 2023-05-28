@@ -124,7 +124,7 @@ impl Addressable for Mmc1 {
                     self.control.set_prg_mode(3);
                     self.sr = SHIFT_REGISTER_INITIAL;
                 } else if self.sr & 1 > 0 {
-                    self.sr = (self.sr >> 1) | (0x50 * (data & 1));
+                    self.sr = (self.sr >> 1) | (0x10 * (data & 1));
                     match address {
                         0x8000..=0x9FFF => self.control.0 = self.sr,
                         0xA000..=0xBFFF => self.chr_bank0_switch = self.sr,
@@ -140,7 +140,7 @@ impl Addressable for Mmc1 {
                     }
                     self.sr = SHIFT_REGISTER_INITIAL;
                 } else {
-                    self.sr = (self.sr >> 1) | (0x50 * (data & 1));
+                    self.sr = (self.sr >> 1) | (0x10 * (data & 1));
                 }
             }
             _ => {
