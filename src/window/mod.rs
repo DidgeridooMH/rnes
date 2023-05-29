@@ -6,7 +6,7 @@ use winit::{
     dpi::PhysicalSize,
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder, WindowButtons},
+    window::{Window, WindowBuilder},
 };
 
 mod vertex;
@@ -52,7 +52,6 @@ impl MainWindow {
 
         let surface = unsafe { instance.create_surface(&window) }.unwrap();
 
-        // TODO: Find best one i guess.
         let adapter = instance
             .enumerate_adapters(wgpu::Backends::all())
             .find(|adapter| adapter.is_surface_supported(&surface))

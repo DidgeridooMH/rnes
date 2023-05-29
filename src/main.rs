@@ -68,7 +68,6 @@ async fn main() {
                 }
             }
 
-            // TODO: may need to use PPU cycles to be more accurate. Drift may occur.
             if let Err(e) = nes.emulate(29780, &mut screen, &window) {
                 eprintln!("{e}");
                 *control_flow = ControlFlow::Exit;

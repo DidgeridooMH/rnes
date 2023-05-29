@@ -83,9 +83,6 @@ impl Nes {
             return Err(format!("Error while loading rom: {e}"));
         };
 
-        println!("{}", bus.borrow());
-        println!("{}", vram_bus.borrow());
-
         Ok(Self {
             cpu,
             ppu,
