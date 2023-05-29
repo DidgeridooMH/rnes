@@ -43,7 +43,7 @@ impl PPUShift {
     pub fn get_pixel_color_index(&self, fine_x: u8) -> u8 {
         let low_bit = ((self.pattern[0] & (0x8000 >> fine_x)) > 0) as u8;
         let high_bit = ((self.pattern[1] & (0x8000 >> fine_x)) > 0) as u8;
-        let attribute = (self.attribute >> 30) as u8;
+        let attribute = (self.attribute >> (30 - (fine_x * 2))) as u8 & 3;
 
         (attribute << 2) | (high_bit << 1) | low_bit
     }
@@ -262,17 +262,12 @@ impl PPU {
                     if color_index & 3 > 0 && sprite_index == 0 {
                         self.sprite0_hit = true;
                     }
-                    if !behind_background || color_index & 3 == 0 {
-                        if sprite_color % 4 > 0 {
-                            background_color = self
-                                .vram_bus
-                                .borrow_mut()
-                                .read_byte(0x3F10 + sprite_color as u16)
-                                .unwrap();
-                        } else {
-                            background_color =
-                                self.vram_bus.borrow_mut().read_byte(0x3F00).unwrap();
-                        }
+                    if (!behind_background || color_index & 3 == 0) && sprite_color % 4 > 0 {
+                        background_color = self
+                            .vram_bus
+                            .borrow_mut()
+                            .read_byte(0x3F10 + sprite_color as u16)
+                            .unwrap();
                     }
                 }
 
