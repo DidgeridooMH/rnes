@@ -133,7 +133,6 @@ impl Addressable for PPU {
                 let data = PPUControl(data);
                 self.nmi_enabled = data.nmi_enable();
                 // master/slave - 6
-                // sprite_size - 5
                 self.sprite_size = data.sprite_size();
                 self.background_table = data.background_pattern() as u16 * 0x1000;
                 self.sprite_table = data.sprite_pattern() as u16 * 0x1000;
@@ -166,7 +165,7 @@ impl Addressable for PPU {
                     self.fine_x = data & 0b111;
                     self.w = true;
                 } else {
-                    self.t.set_fine_y((data & 3).into());
+                    self.t.set_fine_y((data & 0b111).into());
                     self.t.set_coarse_y((data >> 3).into());
                     self.w = false;
                 }
