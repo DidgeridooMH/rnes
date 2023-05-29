@@ -130,11 +130,11 @@ impl Addressable for PPU {
                     return;
                 }
 
-                // TODO: Implement rest of flags.
                 let data = PPUControl(data);
                 self.nmi_enabled = data.nmi_enable();
                 // master/slave - 6
                 // sprite_size - 5
+                self.sprite_size = data.sprite_size();
                 self.background_table = data.background_pattern() as u16 * 0x1000;
                 self.sprite_table = data.sprite_pattern() as u16 * 0x1000;
                 if data.vram_increment() {

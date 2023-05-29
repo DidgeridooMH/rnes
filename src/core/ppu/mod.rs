@@ -88,6 +88,7 @@ pub struct PPU {
     vblank: bool,
     sprite0_hit: bool,
     sprite_overflow: bool,
+    sprite_size: bool,
     reset: bool,
     fine_x: u8,
     frame_count: u32,
@@ -143,6 +144,7 @@ impl PPU {
             secondary_oam: [None; 8],
             current_oam: [None; 8],
             secondary_shifters: [SpriteShift::default(); 8],
+            sprite_size: false,
         }
     }
 
@@ -344,9 +346,10 @@ impl PPU {
     }
 
     fn evaluate_sprites(&mut self) {
+        let sprite_size = if self.sprite_size { 16 } else { 8 };
         for entry in self.primary_oam {
             let scanline = self.scanline as u8;
-            if scanline >= entry.y && scanline < entry.y + 8 {
+            if scanline >= entry.y && scanline < entry.y + sprite_size {
                 match self.secondary_oam.iter().position(|&e| e.is_none()) {
                     Some(index) => self.secondary_oam[index] = Some(entry),
                     None => self.sprite_overflow = true,
@@ -358,18 +361,24 @@ impl PPU {
     fn load_sprite_shifts(&mut self) {
         for i in 0..self.secondary_oam.len() {
             if let Some(entry) = self.secondary_oam[i] {
-                let y = match entry.attributes & 0x80 > 0 {
-                    true => 7 - (self.scanline as u16 - entry.y as u16),
-                    false => self.scanline as u16 - entry.y as u16,
+                let y = if entry.attributes & 0x80 > 0 {
+                    15 - (self.scanline as u16 - entry.y as u16)
+                } else {
+                    self.scanline as u16 - entry.y as u16
                 };
 
                 let mut vram_bus = self.vram_bus.borrow_mut();
+                let tile_index = if y < 8 {
+                    entry.tile_index
+                } else {
+                    entry.tile_index + 1
+                } as u16;
                 self.secondary_shifters[i] = SpriteShift {
                     pattern_low: vram_bus
-                        .read_byte(self.sprite_table + entry.tile_index as u16 * 16 + y)
+                        .read_byte(self.sprite_table + tile_index * 16 + (y % 8))
                         .unwrap(),
                     pattern_high: vram_bus
-                        .read_byte(self.sprite_table + entry.tile_index as u16 * 16 + y + 8)
+                        .read_byte(self.sprite_table + tile_index * 16 + (y % 8) + 8)
                         .unwrap(),
                     attribute: entry.attributes,
                 }
