@@ -11,6 +11,7 @@ pub use cpu::*;
 pub use ppu::*;
 
 use crate::rom::load_rom;
+use crate::window::MainWindow;
 
 use std::time::{Duration, Instant};
 use std::{cell::RefCell, fmt, fs, rc::Rc};
@@ -94,12 +95,16 @@ impl Nes {
         })
     }
 
-    pub fn emulate(&mut self, cycles: usize, screen: &mut [u32]) -> Result<(), String> {
+    pub fn emulate(
+        &mut self,
+        cycles: usize,
+        screen: &mut [u32],
+        window: &MainWindow,
+    ) -> Result<(), String> {
         if self.frame_count_start.elapsed() > Duration::from_secs(1) {
             let frame_count = self.ppu.borrow().frame_count();
             let fps = frame_count as f32 / self.frame_count_start.elapsed().as_secs_f32();
-            // TODO: Add this to the window header.
-            //println!("FPS: {fps} {frame_count} {}", self.cycle_count);
+            window.set_subtitle(&format!("{fps:.0}"));
             self.ppu.borrow_mut().reset_frame_count();
             self.frame_count_start = Instant::now();
         }

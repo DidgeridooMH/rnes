@@ -36,8 +36,7 @@ impl MainWindow {
                 NATIVE_RESOLUTION.width * SCALING_FACTOR,
                 NATIVE_RESOLUTION.height * SCALING_FACTOR,
             ))
-            .with_resizable(false)
-            .with_enabled_buttons(WindowButtons::CLOSE | WindowButtons::MINIMIZE)
+            .with_resize_increments(NATIVE_RESOLUTION)
             .build(event_loop)
         {
             Ok(w) => w,
@@ -218,7 +217,10 @@ impl MainWindow {
         })
     }
 
-    // TODO: Make message channel.
+    pub fn set_subtitle(&self, subtitle: &str) {
+        self.window.set_title(&format!("RNES: {subtitle}"));
+    }
+
     pub fn input(&mut self, event: &WindowEvent, control_flow: &mut ControlFlow) {
         match event {
             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
