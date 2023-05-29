@@ -105,7 +105,7 @@ impl Addressable for Mmc1 {
                         [address as usize - 0xC000]
                 }
                 2 => self.prg_banks[self.prg_bank_switch as usize][address as usize - 0xC000],
-                3 => self.prg_banks[0][address as usize - 0xC000],
+                3 => self.prg_banks[self.prg_banks.len() - 1][address as usize - 0xC000],
                 _ => unreachable!(),
             },
             _ => {
