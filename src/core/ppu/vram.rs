@@ -49,6 +49,7 @@ impl Addressable for VRam {
             0x3000..=0x3EFF => self.read_byte(address - 0x1000),
             0x3F00..=0x3FFF => match address {
                 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => self.read_byte(address - 0x10),
+                0x3F04 | 0x3F08 | 0x3F0C => self.palette[address as usize % 4],
                 _ => self.palette[(address as usize - 0x3F00) % 0x20],
             },
             _ => {
