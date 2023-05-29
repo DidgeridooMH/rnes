@@ -1,4 +1,5 @@
 use clap::Parser;
+use gilrs::{EventType, Gilrs};
 use rnes::window::MainWindow;
 use rnes::{core::Nes, window::NATIVE_RESOLUTION};
 use winit::event_loop::ControlFlow;
@@ -31,6 +32,8 @@ async fn main() {
     let cli = Args::parse();
     let mut nes = Nes::new(&cli.rom, cli.show_ops, cli.show_header).unwrap();
 
+    let mut gamepad = Gilrs::new().unwrap();
+
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
             ref event,
@@ -48,11 +51,23 @@ async fn main() {
                     ..
                 } = &event
                 {
-                    nes.controller.borrow_mut().input(keycode, state);
+                    nes.controller.borrow_mut().input_keyboard(keycode, state);
                 }
             }
         }
         Event::RedrawRequested(window_id) if window_id == window.window.id() => {
+            while let Some(gilrs::Event { event, .. }) = gamepad.next_event() {
+                match event {
+                    EventType::ButtonPressed(button, ..) => {
+                        nes.controller.borrow_mut().gamepad_press(button)
+                    }
+                    EventType::ButtonReleased(button, ..) => {
+                        nes.controller.borrow_mut().gamepad_release(button)
+                    }
+                    _ => {}
+                }
+            }
+
             // TODO: may need to use PPU cycles to be more accurate. Drift may occur.
             if let Err(e) = nes.emulate(29780, &mut screen) {
                 eprintln!("{e}");

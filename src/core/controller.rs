@@ -1,3 +1,4 @@
+use gilrs::ev::Button;
 use winit::event::{ElementState, VirtualKeyCode};
 
 use crate::core::Addressable;
@@ -19,13 +20,39 @@ const KEYMAPPING: [VirtualKeyCode; 8] = [
     VirtualKeyCode::D,
 ];
 
+fn button_bit(button: Button) -> Option<usize> {
+    match button {
+        Button::South => Some(0),
+        Button::East => Some(1),
+        Button::Select => Some(2),
+        Button::Start => Some(3),
+        Button::DPadUp => Some(4),
+        Button::DPadDown => Some(5),
+        Button::DPadLeft => Some(6),
+        Button::DPadRight => Some(7),
+        _ => None,
+    }
+}
+
 impl Controller {
-    pub fn input(&mut self, keycode: &VirtualKeyCode, state: &ElementState) {
+    pub fn input_keyboard(&mut self, keycode: &VirtualKeyCode, state: &ElementState) {
         if let Some(position) = KEYMAPPING.iter().position(|k| k == keycode) {
             match state {
                 ElementState::Pressed => self.current_buttons |= 1 << position,
                 ElementState::Released => self.current_buttons &= !(1 << position),
             }
+        }
+    }
+
+    pub fn gamepad_press(&mut self, button: Button) {
+        if let Some(position) = button_bit(button) {
+            self.current_buttons |= 1 << position;
+        }
+    }
+
+    pub fn gamepad_release(&mut self, button: Button) {
+        if let Some(position) = button_bit(button) {
+            self.current_buttons &= !(1 << position);
         }
     }
 }
