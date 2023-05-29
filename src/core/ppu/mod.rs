@@ -106,8 +106,8 @@ pub struct PPU {
     attribute: u8,
     oam_address: u8,
     primary_oam: [OamEntry; 64],
-    secondary_oam: [Option<OamEntry>; 8],
-    current_oam: [Option<OamEntry>; 8],
+    secondary_oam: [Option<(OamEntry, usize)>; 8],
+    current_oam: [Option<(OamEntry, usize)>; 8],
     secondary_shifters: [SpriteShift; 8],
 }
 
@@ -245,7 +245,9 @@ impl PPU {
 
             if (1..=256).contains(&self.cycle) && self.scanline < 240 {
                 let color_index = self.shifter.get_pixel_color_index(self.fine_x);
-                let mut background_color = match self.mask.show_background() {
+                let mut background_color = match self.mask.show_background()
+                    && (self.mask.show_background_left() || self.cycle > 8)
+                {
                     true => self
                         .vram_bus
                         .borrow_mut()
@@ -261,7 +263,7 @@ impl PPU {
                 };
 
                 if sprite_color > 0 {
-                    if color_index & 3 > 0 && sprite_index == 0 {
+                    if color_index & 3 > 0 && sprite_index == 0 && self.mask.show_background() {
                         self.sprite0_hit = true;
                     }
                     if (!behind_background || color_index & 3 == 0) && sprite_color % 4 > 0 {
@@ -307,7 +309,7 @@ impl PPU {
 
     fn update_address(&mut self) {
         if self.cycle % 8 == 0
-            && ((1..=255).contains(&self.cycle) || (328..=336).contains(&self.cycle))
+            && ((1..=255).contains(&self.cycle) || (321..=336).contains(&self.cycle))
         {
             self.increment_x();
         } else if self.cycle == 256 {
@@ -347,11 +349,11 @@ impl PPU {
 
     fn evaluate_sprites(&mut self) {
         let sprite_size = if self.sprite_size { 16 } else { 8 };
-        for entry in self.primary_oam {
+        for (i, entry) in self.primary_oam.iter().enumerate() {
             let scanline = self.scanline as u8;
             if scanline >= entry.y && scanline < entry.y + sprite_size {
                 match self.secondary_oam.iter().position(|&e| e.is_none()) {
-                    Some(index) => self.secondary_oam[index] = Some(entry),
+                    Some(index) => self.secondary_oam[index] = Some((*entry, i)),
                     None => self.sprite_overflow = true,
                 }
             }
@@ -360,7 +362,7 @@ impl PPU {
 
     fn load_sprite_shifts(&mut self) {
         for i in 0..self.secondary_oam.len() {
-            if let Some(entry) = self.secondary_oam[i] {
+            if let Some((entry, _)) = self.secondary_oam[i] {
                 let y = if entry.attributes & 0x80 > 0 {
                     15 - (self.scanline as u16 - entry.y as u16)
                 } else {
@@ -368,19 +370,24 @@ impl PPU {
                 };
 
                 let mut vram_bus = self.vram_bus.borrow_mut();
-                let tile_index = if (y < 8 && (entry.attributes & 0x80 == 0))
-                    || (y >= 8 && (entry.attributes & 0x80 > 0))
-                {
-                    entry.tile_index
+
+                let tile_index = if y < 8 {
+                    entry.tile_index & 0xFE
                 } else {
-                    entry.tile_index + 1
+                    (entry.tile_index & 0xFE) + 1
                 } as u16;
+
+                let sprite_table = if self.sprite_size {
+                    (entry.tile_index & 1) as u16 * 0x1000
+                } else {
+                    self.sprite_table
+                };
                 self.secondary_shifters[i] = SpriteShift {
                     pattern_low: vram_bus
-                        .read_byte(self.sprite_table + tile_index * 16 + (y % 8))
+                        .read_byte(sprite_table + tile_index * 16 + (y % 8))
                         .unwrap(),
                     pattern_high: vram_bus
-                        .read_byte(self.sprite_table + tile_index * 16 + (y % 8) + 8)
+                        .read_byte(sprite_table + tile_index * 16 + (y % 8) + 8)
                         .unwrap(),
                     attribute: entry.attributes,
                 }
@@ -389,14 +396,18 @@ impl PPU {
     }
 
     fn get_sprite_pixel(&self) -> (u8, usize, bool) {
+        if !self.mask.show_sprite_left() && self.cycle <= 8 {
+            return (0, 0, false);
+        }
+
         let x = (self.cycle - 1) as u8;
         let mut pattern: Option<(u8, usize, bool)> = None;
         for i in 0..self.current_oam.len() {
-            if let Some(entry) = self.current_oam[i] {
+            if let Some((entry, index)) = self.current_oam[i] {
                 if x >= entry.x && x < entry.x + 8 {
                     let color_index = self.secondary_shifters[i].get_pixel_color_index(x - entry.x);
                     if (color_index & 3) > 0 && pattern.is_none() {
-                        pattern = Some((color_index, i, (entry.attributes & (1 << 5)) > 0));
+                        pattern = Some((color_index, index, (entry.attributes & (1 << 5)) > 0));
                     }
                 }
             }
