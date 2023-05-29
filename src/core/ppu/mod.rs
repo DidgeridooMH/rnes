@@ -358,22 +358,18 @@ impl PPU {
     fn load_sprite_shifts(&mut self) {
         for i in 0..self.secondary_oam.len() {
             if let Some(entry) = self.secondary_oam[i] {
+                let y = match entry.attributes & 0x80 > 0 {
+                    true => 7 - (self.scanline as u16 - entry.y as u16),
+                    false => self.scanline as u16 - entry.y as u16,
+                };
+
                 let mut vram_bus = self.vram_bus.borrow_mut();
                 self.secondary_shifters[i] = SpriteShift {
                     pattern_low: vram_bus
-                        .read_byte(
-                            self.sprite_table
-                                + entry.tile_index as u16 * 16
-                                + (self.scanline as u16 - entry.y as u16),
-                        )
+                        .read_byte(self.sprite_table + entry.tile_index as u16 * 16 + y)
                         .unwrap(),
                     pattern_high: vram_bus
-                        .read_byte(
-                            self.sprite_table
-                                + entry.tile_index as u16 * 16
-                                + (self.scanline as u16 - entry.y as u16)
-                                + 8,
-                        )
+                        .read_byte(self.sprite_table + entry.tile_index as u16 * 16 + y + 8)
                         .unwrap(),
                     attribute: entry.attributes,
                 }

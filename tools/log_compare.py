@@ -25,9 +25,9 @@ def read_log(filename: str) -> list[Instruction]:
                 instructions.append(Instruction(a, x, y, p, pc))
     return instructions
 
-rnes = read_log('logs/mine.txt')
+rnes = read_log('output.txt')
 print('RNES read: ', len(rnes))
-fceux = read_log('logs/theirs.txt')
+fceux = read_log('logs/official.log')
 print('FCEUX read: ', len(fceux))
 
 for i in range(0, min(len(rnes), len(fceux))):

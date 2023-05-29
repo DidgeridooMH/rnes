@@ -103,7 +103,7 @@ impl CPU {
         self.a = sum2;
         self.p.set_c(overflow1 || overflow2);
         self.p
-            .set_v((a ^ operand) & 0x80 != 0 && (a ^ self.a) & 0x80 != 0);
+            .set_v((a ^ operand) & 0x80 == 0 && (a ^ self.a) & 0x80 != 0);
 
         self.set_nz_flags(self.a);
     }

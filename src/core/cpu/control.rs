@@ -117,8 +117,13 @@ impl CPU {
             let prev_pc = self.pc;
 
             // PC is incremented after memory fetch.
-            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as i8 + 2;
-            self.pc = (self.pc as i16 + offset as i16) as u16;
+            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as u16;
+            self.pc += 2;
+            self.pc = if offset & 0x80 > 0 {
+                self.pc.wrapping_add(offset | 0xFF00)
+            } else {
+                self.pc.wrapping_add(offset)
+            };
 
             if (prev_pc >> 8) != (self.pc >> 8) {
                 Ok((0, 5))

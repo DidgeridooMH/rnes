@@ -50,9 +50,14 @@ impl Mmc1 {
             cursor += PRG_ROM_SIZE;
         }
         let mut chr_banks: Vec<[u8; CHR_ROM_SIZE]> = Vec::with_capacity(num_chr_banks as usize);
-        for _ in 0..num_chr_banks {
-            chr_banks.push(data[cursor..(cursor + CHR_ROM_SIZE)].try_into().unwrap());
-            cursor += CHR_ROM_SIZE;
+        if num_chr_banks > 0 {
+            for _ in 0..num_chr_banks {
+                chr_banks.push(data[cursor..(cursor + CHR_ROM_SIZE)].try_into().unwrap());
+                cursor += CHR_ROM_SIZE;
+            }
+        } else {
+            chr_banks.push([0; CHR_ROM_SIZE]);
+            chr_banks.push([0; CHR_ROM_SIZE]);
         }
 
         let rom = Rc::new(RefCell::new(Self {
