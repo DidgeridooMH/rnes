@@ -84,7 +84,7 @@ impl Addressable for PPU {
             }
             PPUDATA => {
                 let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
-                if address < 0x3F00 {
+                if self.v.0 < 0x3F00 {
                     std::mem::swap(&mut self.internal_data_buffer, &mut read_byte);
                 } else {
                     self.internal_data_buffer = self
@@ -93,7 +93,7 @@ impl Addressable for PPU {
                         .read_byte(self.v.0 - 0x1000)
                         .unwrap();
                 }
-                self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
+                self.v.0 = (self.v.0 + self.increment_size) & 0x3FFF;
                 read_byte
             }
             OAMDATA => match self.oam_address % 4 {
@@ -186,7 +186,7 @@ impl Addressable for PPU {
                     .borrow_mut()
                     .write_byte(self.v.0, data)
                     .unwrap();
-                self.v.0 = (self.v.0 + self.increment_size) & 0x7FFF;
+                self.v.0 = (self.v.0 + self.increment_size) & 0x3FFF;
             }
             _ => {
                 println!("(warn) Wrote to read only port {address:X}");

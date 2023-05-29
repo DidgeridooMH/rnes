@@ -4,11 +4,13 @@ pub use nrom::*;
 mod mmc1;
 pub use mmc1::*;
 
-use crate::core::Bus;
+use crate::core::{Bus, VRam};
 use std::{cell::RefCell, rc::Rc};
 
 #[derive(Copy, Clone, Debug)]
 pub enum MirrorArrangement {
+    OneScreenLower,
+    OneScreenUpper,
     Horizontal,
     Vertical,
 }
@@ -48,8 +50,8 @@ impl RomHeader {
             prg: header[4],
             chr: header[5],
             mirroring: match header[6] & 1 > 0 {
-                true => MirrorArrangement::Horizontal,
-                false => MirrorArrangement::Vertical,
+                true => MirrorArrangement::Vertical,
+                false => MirrorArrangement::Horizontal,
             },
             mapper: Mapper::from_id((header[6] >> 4) | (header[7] & 0xF0u8)),
         })
@@ -61,11 +63,14 @@ pub fn load_rom(
     bus: &Rc<RefCell<Bus>>,
     vram_bus: &Rc<RefCell<Bus>>,
     show_header: bool,
-) -> Result<RomHeader, String> {
+    vram: &Rc<RefCell<VRam>>,
+) -> Result<(), String> {
     let header = match RomHeader::from_slice(&rom[0..16]) {
         Ok(h) => h,
         Err(e) => return Err(e),
     };
+
+    vram.borrow_mut().set_mirroring(header.mirroring);
 
     if show_header {
         println!("{header:?}");
@@ -73,9 +78,9 @@ pub fn load_rom(
 
     match header.mapper {
         Mapper::Nrom => Nrom::register(&rom[16..], header.prg, header.chr, bus, vram_bus),
-        Mapper::Mmc1 => Mmc1::register(&rom[16..], header.prg, header.chr, bus, vram_bus),
+        Mapper::Mmc1 => Mmc1::register(&rom[16..], header.prg, header.chr, bus, vram_bus, vram),
         _ => return Err("Unsupported mapper".into()),
     }
 
-    Ok(header)
+    Ok(())
 }

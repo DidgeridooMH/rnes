@@ -263,11 +263,16 @@ impl PPU {
                         self.sprite0_hit = true;
                     }
                     if !behind_background || color_index & 3 == 0 {
-                        background_color = self
-                            .vram_bus
-                            .borrow_mut()
-                            .read_byte(0x3F10 + sprite_color as u16)
-                            .unwrap();
+                        if sprite_color % 4 > 0 {
+                            background_color = self
+                                .vram_bus
+                                .borrow_mut()
+                                .read_byte(0x3F10 + sprite_color as u16)
+                                .unwrap();
+                        } else {
+                            background_color =
+                                self.vram_bus.borrow_mut().read_byte(0x3F00).unwrap();
+                        }
                     }
                 }
 

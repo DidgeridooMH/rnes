@@ -1,7 +1,9 @@
 use bitfield::bitfield;
 use std::{cell::RefCell, rc::Rc};
 
-use crate::core::{Addressable, Bus};
+use crate::core::{Addressable, Bus, VRam};
+
+use super::MirrorArrangement;
 
 const SHIFT_REGISTER_INITIAL: u8 = 0x10;
 const PRG_RAM_SIZE: usize = 8 * 1024;
@@ -22,7 +24,6 @@ bitfield! {
 
 pub struct Mmc1 {
     prg_bank_switch: u8,
-    // TODO: Mirroring,
     chr_bank0_switch: u8,
     chr_bank1_switch: u8,
     sr: u8,
@@ -30,6 +31,7 @@ pub struct Mmc1 {
     prg_ram: [u8; PRG_RAM_SIZE],
     prg_banks: Vec<[u8; PRG_ROM_SIZE]>,
     chr_banks: Vec<[u8; CHR_ROM_SIZE]>,
+    vram: Rc<RefCell<VRam>>,
 }
 
 impl Mmc1 {
@@ -39,6 +41,7 @@ impl Mmc1 {
         num_chr_banks: u8,
         bus: &Rc<RefCell<Bus>>,
         vram_bus: &Rc<RefCell<Bus>>,
+        vram: &Rc<RefCell<VRam>>,
     ) {
         let mut cursor = 0;
         let mut prg_banks: Vec<[u8; PRG_ROM_SIZE]> = Vec::with_capacity(num_rom_banks as usize);
@@ -61,6 +64,7 @@ impl Mmc1 {
             prg_ram: [0; PRG_RAM_SIZE],
             prg_banks,
             chr_banks,
+            vram: vram.clone(),
         }));
 
         bus.borrow_mut()
@@ -126,7 +130,18 @@ impl Addressable for Mmc1 {
                 } else if self.sr & 1 > 0 {
                     self.sr = (self.sr >> 1) | (0x10 * (data & 1));
                     match address {
-                        0x8000..=0x9FFF => self.control.0 = self.sr,
+                        0x8000..=0x9FFF => {
+                            self.control.0 = self.sr;
+                            self.vram
+                                .borrow_mut()
+                                .set_mirroring(match self.control.mirroring() {
+                                    0 => MirrorArrangement::OneScreenLower,
+                                    1 => MirrorArrangement::OneScreenUpper,
+                                    2 => MirrorArrangement::Vertical,
+                                    3 => MirrorArrangement::Horizontal,
+                                    _ => unreachable!(),
+                                });
+                        }
                         0xA000..=0xBFFF => self.chr_bank0_switch = self.sr,
                         0xC000..=0xDFFF => self.chr_bank1_switch = self.sr,
                         0xE000..=0xFFFF => {

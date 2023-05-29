@@ -73,18 +73,14 @@ impl Nes {
                 return Err("Unable to read rom file.".into());
             }
         };
+        let vram = Rc::new(RefCell::new(VRam::default()));
+        vram_bus
+            .borrow_mut()
+            .register_region(0x2000..=0x3FFF, vram.clone());
 
-        let rom_info = match load_rom(&rom_file, &bus, &vram_bus, show_header) {
-            Ok(i) => i,
-            Err(e) => {
-                return Err(format!("Error while loading rom: {e}"));
-            }
+        if let Err(e) = load_rom(&rom_file, &bus, &vram_bus, show_header, &vram) {
+            return Err(format!("Error while loading rom: {e}"));
         };
-
-        vram_bus.borrow_mut().register_region(
-            0x2000..=0x3FFF,
-            Rc::new(RefCell::new(VRam::new(rom_info.mirroring))),
-        );
 
         println!("{}", bus.borrow());
         println!("{}", vram_bus.borrow());
