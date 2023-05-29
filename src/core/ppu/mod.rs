@@ -368,7 +368,9 @@ impl PPU {
                 };
 
                 let mut vram_bus = self.vram_bus.borrow_mut();
-                let tile_index = if y < 8 {
+                let tile_index = if (y < 8 && (entry.attributes & 0x80 == 0))
+                    || (y >= 8 && (entry.attributes & 0x80 > 0))
+                {
                     entry.tile_index
                 } else {
                     entry.tile_index + 1

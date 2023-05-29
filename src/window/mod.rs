@@ -13,7 +13,7 @@ mod vertex;
 
 pub const NATIVE_RESOLUTION: PhysicalSize<u32> = PhysicalSize::new(256, 240);
 pub const BYTES_PER_PIXEL: usize = 4;
-const SCALING_FACTOR: u32 = 2;
+const SCALING_FACTOR: u32 = 3;
 
 pub struct MainWindow {
     pub window: Window,
