@@ -114,11 +114,10 @@ impl CPU {
         }
 
         if should_branch {
-            let prev_pc = self.pc;
-
             // PC is incremented after memory fetch.
             let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as u16;
             self.pc += 2;
+            let prev_pc = self.pc;
             self.pc = if offset & 0x80 > 0 {
                 self.pc.wrapping_add(offset | 0xFF00)
             } else {
@@ -187,7 +186,7 @@ impl CPU {
 
         self.bus.borrow_mut().write_byte(address, self.y)?;
 
-        Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 2))
+        Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 1))
     }
 
     fn dey(&mut self) -> OpcodeResult {

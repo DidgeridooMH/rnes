@@ -22,7 +22,7 @@ impl CPU {
             0xCA => self.dex()?,
             0xE6 | 0xF6 | 0xEE | 0xFE => self.inc(opcode)?,
             0x1A | 0x3A | 0x5A | 0x7A | 0xDA | 0xFA => (1, 2),
-            0xEA => (1, 3),
+            0xEA => (1, 2),
             _ => return Err(CoreError::OpcodeNotImplemented(opcode)),
         };
 
@@ -44,10 +44,13 @@ impl CPU {
             self.p.set_c(operand & 0x80 > 0);
             self.bus.borrow_mut().write_byte(address, operand << 1)?;
             self.set_nz_flags(operand << 1);
-            Ok((
-                address_mode.byte_code_size() + 1,
-                address_mode.cycle_cost() + 2,
-            ))
+
+            let mut cycle = address_mode.cycle_cost() + 3;
+            if let AddressMode::AbsoluteX = address_mode {
+                cycle += 1;
+            }
+
+            Ok((address_mode.byte_code_size() + 1, cycle))
         }
     }
 
@@ -68,10 +71,13 @@ impl CPU {
             operand |= carry;
             self.bus.borrow_mut().write_byte(address, operand)?;
             self.set_nz_flags(operand);
-            Ok((
-                address_mode.byte_code_size() + 1,
-                address_mode.cycle_cost() + 2,
-            ))
+
+            let mut cycle = address_mode.cycle_cost() + 3;
+            if let AddressMode::AbsoluteX = address_mode {
+                cycle += 1;
+            }
+
+            Ok((address_mode.byte_code_size() + 1, cycle))
         }
     }
 
@@ -88,10 +94,13 @@ impl CPU {
             self.p.set_c(operand & 1 > 0);
             self.bus.borrow_mut().write_byte(address, operand >> 1)?;
             self.set_nz_flags(operand >> 1);
-            Ok((
-                address_mode.byte_code_size() + 1,
-                address_mode.cycle_cost() + 2,
-            ))
+
+            let mut cycle = address_mode.cycle_cost() + 3;
+            if let AddressMode::AbsoluteX = address_mode {
+                cycle += 1;
+            }
+
+            Ok((address_mode.byte_code_size() + 1, cycle))
         }
     }
 
@@ -112,10 +121,13 @@ impl CPU {
             operand |= carry * 0x80;
             self.bus.borrow_mut().write_byte(address, operand)?;
             self.set_nz_flags(operand);
-            Ok((
-                address_mode.byte_code_size() + 1,
-                address_mode.cycle_cost() + 2,
-            ))
+
+            let mut cycle = address_mode.cycle_cost() + 3;
+            if let AddressMode::AbsoluteX = address_mode {
+                cycle += 1;
+            }
+
+            Ok((address_mode.byte_code_size() + 1, cycle))
         }
     }
 
@@ -195,10 +207,12 @@ impl CPU {
 
         self.set_nz_flags(operand.wrapping_sub(1));
 
-        Ok((
-            address_mode.byte_code_size() + 1,
-            address_mode.cycle_cost() + 1,
-        ))
+        let mut cycle = address_mode.cycle_cost() + 3;
+        if let AddressMode::AbsoluteX = address_mode {
+            cycle += 1;
+        }
+
+        Ok((address_mode.byte_code_size() + 1, cycle))
     }
 
     fn dex(&mut self) -> OpcodeResult {
@@ -218,9 +232,11 @@ impl CPU {
 
         self.set_nz_flags(operand.wrapping_add(1));
 
-        Ok((
-            address_mode.byte_code_size() + 1,
-            address_mode.cycle_cost() + 1,
-        ))
+        let mut cycle = address_mode.cycle_cost() + 3;
+        if let AddressMode::AbsoluteX = address_mode {
+            cycle += 1;
+        }
+
+        Ok((address_mode.byte_code_size() + 1, cycle))
     }
 }

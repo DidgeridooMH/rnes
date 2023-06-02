@@ -79,10 +79,6 @@ impl CPU {
 
     pub fn set_show_ops(&mut self, show: bool) {
         self.show_ops = show;
-
-        if show {
-            println!("RNES {} - Trace Log File", env!("CARGO_PKG_VERSION"));
-        }
     }
 
     pub fn generate_nmi(&mut self) {
@@ -278,7 +274,7 @@ impl AddressMode {
             | AddressMode::AbsoluteY => 3,
             AddressMode::IndirectX => 5,
             AddressMode::IndirectY => 4,
-            AddressMode::Indirect => 4,
+            AddressMode::Indirect => 5,
         }
     }
 
