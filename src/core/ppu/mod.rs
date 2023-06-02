@@ -155,7 +155,7 @@ impl PPU {
         let fetching_cycle = (1..=257).contains(&self.cycle) || (321..=336).contains(&self.cycle);
         let visible_scanline = (0..=239).contains(&self.scanline);
 
-        if visible_scanline || prerender_scanline {
+        if visible_scanline {
             if self.cycle == 1 {
                 self.secondary_oam = [None; 8];
             } else if self.cycle == 65 {
@@ -167,7 +167,7 @@ impl PPU {
         }
 
         if self.mask.show_background() || self.mask.show_sprite() {
-            if fetching_cycle {
+            if fetching_cycle && (visible_scanline || prerender_scanline) {
                 match self.cycle % 8 {
                     1 => {
                         self.shifter.load_pattern_low(self.pattern_low);
@@ -177,7 +177,7 @@ impl PPU {
                         self.name_table_selector = self
                             .vram_bus
                             .borrow_mut()
-                            .read_byte((self.v.0 & 0xFFF) + NAMETABLE_BASE_ADDR)
+                            .read_byte((self.v.0 & 0xFFF) | NAMETABLE_BASE_ADDR)
                             .unwrap();
                     }
                     3 => {
@@ -316,11 +316,12 @@ impl PPU {
 
     fn increment_y(&mut self) {
         if self.v.fine_y() == 0b111 {
-            if self.v.coarse_y() == 0b11111 {
+            self.v.set_coarse_y(self.v.coarse_y() + 1);
+            if self.v.coarse_y() >= 30 {
                 self.v
                     .set_nametable_select(self.v.nametable_select() ^ 0b10);
+                self.v.set_coarse_y(0);
             }
-            self.v.set_coarse_y(self.v.coarse_y() + 1);
         }
         self.v.set_fine_y(self.v.fine_y() + 1);
     }

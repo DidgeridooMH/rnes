@@ -27,7 +27,7 @@ impl PPU {
         let sprite_size = if self.sprite_size { 16 } else { 8 };
         for (i, entry) in self.primary_oam.iter().enumerate() {
             let scanline = self.scanline as u8;
-            if scanline >= entry.y && scanline < entry.y + sprite_size {
+            if scanline >= entry.y && scanline <= entry.y + (sprite_size - 1) {
                 match self.secondary_oam.iter().position(|&e| e.is_none()) {
                     Some(index) => self.secondary_oam[index] = Some((*entry, i)),
                     None => self.sprite_overflow = true,
@@ -37,10 +37,12 @@ impl PPU {
     }
 
     pub fn load_sprite_shifts(&mut self) {
+        let sprite_size = if self.sprite_size { 16 } else { 8 };
+
         for i in 0..self.secondary_oam.len() {
             if let Some((entry, _)) = self.secondary_oam[i] {
                 let y = if entry.attributes & 0x80 > 0 {
-                    15 - (self.scanline as u16 - entry.y as u16)
+                    (sprite_size - 1) - (self.scanline as u16 - entry.y as u16)
                 } else {
                     self.scanline as u16 - entry.y as u16
                 };
@@ -48,7 +50,11 @@ impl PPU {
                 let mut vram_bus = self.vram_bus.borrow_mut();
 
                 let tile_index = if y < 8 {
-                    entry.tile_index & 0xFE
+                    if self.sprite_size {
+                        entry.tile_index & 0xFE
+                    } else {
+                        entry.tile_index
+                    }
                 } else {
                     (entry.tile_index & 0xFE) + 1
                 } as u16;
