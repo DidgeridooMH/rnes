@@ -222,17 +222,18 @@ impl PPU {
             }
 
             if (1..=256).contains(&self.cycle) && visible_scanline {
-                let color_index = self.shifter.get_pixel_color_index(self.fine_x);
-                let mut background_color = match self.mask.show_background()
+                let color_index = if self.mask.show_background()
                     && (self.mask.show_background_left() || self.cycle > 8)
                 {
-                    true => self
-                        .vram_bus
-                        .borrow_mut()
-                        .read_byte(0x3F00 + color_index as u16)
-                        .unwrap(),
-                    false => 0,
+                    self.shifter.get_pixel_color_index(self.fine_x)
+                } else {
+                    0
                 };
+                let mut background_color = self
+                    .vram_bus
+                    .borrow_mut()
+                    .read_byte(0x3F00 + color_index as u16)
+                    .unwrap();
 
                 let (sprite_color, sprite_index, behind_background) = match self.mask.show_sprite()
                 {
