@@ -10,9 +10,8 @@ mod palette;
 mod vram;
 pub use vram::VRam;
 
-use self::oam::OamEntry;
-
 mod oam;
+use oam::OamEntry;
 
 const NAMETABLE_BASE_ADDR: u16 = 0x2000;
 
@@ -404,7 +403,7 @@ impl PPU {
         let mut pattern: Option<(u8, usize, bool)> = None;
         for i in 0..self.current_oam.len() {
             if let Some((entry, index)) = self.current_oam[i] {
-                if x >= entry.x && x < entry.x + 8 {
+                if x >= entry.x && x <= entry.x + 7 {
                     let color_index = self.secondary_shifters[i].get_pixel_color_index(x - entry.x);
                     if (color_index & 3) > 0 && pattern.is_none() {
                         pattern = Some((color_index, index, (entry.attributes & (1 << 5)) > 0));
