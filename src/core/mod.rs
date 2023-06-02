@@ -112,8 +112,9 @@ impl Nes {
                 Ok(cycle_count) => {
                     self.cycle_count += cycle_count;
                     used_cycles += cycle_count;
+                    let mut ppu = self.ppu.borrow_mut();
                     for _ in 0..(cycle_count * 3) {
-                        if self.ppu.borrow_mut().tick(screen) {
+                        if ppu.tick(screen) {
                             self.cpu.generate_nmi();
                         }
                     }
