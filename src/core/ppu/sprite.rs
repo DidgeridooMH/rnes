@@ -30,7 +30,11 @@ impl PPU {
             if scanline >= entry.y && scanline <= entry.y + (sprite_size - 1) {
                 match self.secondary_oam.iter().position(|&e| e.is_none()) {
                     Some(index) => self.secondary_oam[index] = Some((*entry, i)),
-                    None => self.sprite_overflow = true,
+                    None => {
+                        if self.mask.show_sprite() || self.mask.show_background() {
+                            self.sprite_overflow = true;
+                        }
+                    }
                 }
             }
         }
