@@ -254,9 +254,11 @@ impl PPU {
                     }
                 }
 
-                screen[self.cycle as usize - 1
-                    + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
-                    palette::PALETTE[background_color as usize % 64];
+                if self.scanline >= 8 && self.scanline < (240 - 8) {
+                    screen[self.cycle as usize - 1
+                        + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
+                        palette::PALETTE[background_color as usize % 64];
+                }
             }
 
             if fetching_cycle {

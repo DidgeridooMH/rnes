@@ -1,9 +1,13 @@
 use clap::Parser;
 use gilrs::{EventType, Gilrs};
-use rnes::window::MainWindow;
-use rnes::{core::Nes, window::NATIVE_RESOLUTION};
-use winit::event_loop::ControlFlow;
-use winit::{event::*, event_loop::EventLoop};
+use rnes::{
+    core::Nes,
+    window::{MainWindow, NATIVE_RESOLUTION},
+};
+use winit::{
+    event::*,
+    event_loop::{ControlFlow, EventLoop},
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "RNES", author, version, about)]
