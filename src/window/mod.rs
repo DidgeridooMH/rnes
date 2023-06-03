@@ -1,4 +1,3 @@
-use std::time::{Duration, Instant};
 use wgpu::{
     util::DeviceExt, Buffer, Device, Queue, RenderPipeline, Surface, SurfaceConfiguration, Texture,
 };
@@ -25,7 +24,6 @@ pub struct MainWindow {
     screen_texture: Texture,
     texture_bind_group: wgpu::BindGroup,
     config: SurfaceConfiguration,
-    last_frame: Instant,
 }
 
 impl MainWindow {
@@ -212,7 +210,6 @@ impl MainWindow {
             screen_texture,
             texture_bind_group,
             config,
-            last_frame: Instant::now(),
         })
     }
 
@@ -234,9 +231,6 @@ impl MainWindow {
     }
 
     pub fn render(&mut self, screen_buffer: &[u32]) -> Result<(), wgpu::SurfaceError> {
-        while self.last_frame.elapsed() < Duration::from_micros(16666) {}
-        self.last_frame = Instant::now();
-
         let output = self.surface.get_current_texture()?;
 
         let view = output

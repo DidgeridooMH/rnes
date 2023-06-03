@@ -39,8 +39,26 @@ impl fmt::Display for CoreError {
     }
 }
 
+// Buses are setup to read/write to a component and that behavior cannot be separated.
+// This structure bridges the two.
+struct RwAddressable {
+    read: Rc<RefCell<dyn Addressable>>,
+    write: Rc<RefCell<dyn Addressable>>,
+}
+
+impl Addressable for RwAddressable {
+    fn read_byte(&mut self, address: u16) -> u8 {
+        self.read.borrow_mut().read_byte(address)
+    }
+
+    fn write_byte(&mut self, address: u16, data: u8) {
+        self.write.borrow_mut().write_byte(address, data);
+    }
+}
+
 pub struct Nes {
     cpu: CPU,
+    apu: Rc<RefCell<APU>>,
     ppu: Rc<RefCell<PPU>>,
     cycle_count: usize,
     frame_count_start: Instant,
@@ -61,12 +79,21 @@ impl Nes {
 
         let controller = Rc::new(RefCell::new(Controller::default()));
         bus.borrow_mut()
-            .register_region(0x4016..=0x4017, controller.clone());
+            .register_region(0x4016..=0x4016, controller.clone());
 
         let apu = Rc::new(RefCell::new(APU::default()));
         bus.borrow_mut()
             .register_region(0x4000..=0x4013, apu.clone());
-        bus.borrow_mut().register_region(0x4015..=0x4015, apu);
+        bus.borrow_mut()
+            .register_region(0x4015..=0x4015, apu.clone());
+
+        bus.borrow_mut().register_region(
+            0x4017..=0x4017,
+            Rc::new(RefCell::new(RwAddressable {
+                read: controller.clone(),
+                write: apu.clone(),
+            })),
+        );
 
         let rom_file = match fs::read(rom_file) {
             Ok(f) => f,
@@ -85,6 +112,7 @@ impl Nes {
 
         Ok(Self {
             cpu,
+            apu,
             ppu,
             controller,
             cycle_count: 0,
@@ -118,6 +146,7 @@ impl Nes {
                             self.cpu.generate_nmi();
                         }
                     }
+                    self.apu.borrow_mut().tick(cycle_count);
                 }
                 Err(e) => {
                     self.cpu.dump();
