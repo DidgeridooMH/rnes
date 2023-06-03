@@ -111,6 +111,7 @@ impl Addressable for APU {
                 pulse.length_counter_halt = data & 0x20 > 0;
                 pulse.use_constant_volume = data & 0x10 > 0;
                 pulse.constant_volume = data & 0xF;
+                pulse.duty_cycle = data >> 6;
             }
             0x4002 | 0x4006 => {
                 let mut pulse = if address == 0x4002 {

@@ -1,6 +1,13 @@
 use crate::core::MASTER_VOLUME;
 use sdl2::audio::AudioCallback;
 
+const DUTY_CYCLES: [[u32; 8]; 4] = [
+    [0, 1, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 1, 1, 0, 0, 0],
+    [1, 0, 0, 1, 1, 1, 1, 1],
+];
+
 pub struct Pulse {
     spec_freq: f32,
     phase: f32,
@@ -14,6 +21,7 @@ pub struct Pulse {
     pub constant_volume: u8,
     decay: u8,
     pub timer: u16,
+    pub duty_cycle: u8,
 }
 
 impl Pulse {
@@ -29,6 +37,7 @@ impl Pulse {
             constant_volume: 15,
             decay: 15,
             timer: 0,
+            duty_cycle: 0,
         }
     }
 
@@ -59,7 +68,9 @@ impl AudioCallback for Pulse {
         let phase_inc = frequency / self.spec_freq;
         for x in out.iter_mut() {
             if self.enabled && self.length_counter > 0 && self.timer >= 8 {
-                let wave = if self.phase <= 0.5 { 1.0 } else { -1.0 };
+                // let wave = if self.phase <= 0.5 { 1.0 } else { -1.0 };
+                let wave =
+                    DUTY_CYCLES[self.duty_cycle as usize][(self.phase * 8.0) as usize] as f32;
                 let decay = self.decay as f32 / 15.0;
                 *x = decay * wave * self.volume * MASTER_VOLUME;
                 self.phase = (self.phase + phase_inc) % 1.0;
