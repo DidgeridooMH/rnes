@@ -1,51 +1,38 @@
-use crate::core::MASTER_VOLUME;
+use super::{envelope::Envelope, sweep::Sweep, MASTER_VOLUME};
 use sdl2::audio::AudioCallback;
 
 const DUTY_CYCLES: [[u32; 8]; 4] = [
-    [0, 1, 0, 0, 0, 0, 0, 0],
-    [0, 1, 1, 0, 0, 0, 0, 0],
-    [0, 1, 1, 1, 1, 0, 0, 0],
-    [1, 0, 0, 1, 1, 1, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 1, 1],
+    [0, 0, 0, 0, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 0, 0],
 ];
 
+#[derive(Default)]
 pub struct Pulse {
     spec_freq: f32,
-    phase: f32,
+    pub phase: f32,
     volume: f32,
 
     pub enabled: bool,
 
     pub length_counter: u8,
     pub length_counter_halt: bool,
-    pub use_constant_volume: bool,
-    pub constant_volume: u8,
-    decay: u8,
     pub timer: u16,
     pub duty_cycle: u8,
+
+    pub sweep: Sweep,
+    pub envelope: Envelope,
 }
 
 impl Pulse {
-    pub fn new(spec_freq: f32, phase: f32) -> Self {
+    pub fn new(spec_freq: f32, phase: f32, channel: u8) -> Self {
         Self {
             spec_freq,
             phase,
             volume: 1.0,
-            enabled: false,
-            length_counter: 0,
-            length_counter_halt: false,
-            use_constant_volume: false,
-            constant_volume: 15,
-            decay: 15,
-            timer: 0,
-            duty_cycle: 0,
-        }
-    }
-
-    pub fn step(&mut self) {
-        if self.use_constant_volume || (self.decay == 0 && self.length_counter_halt) {
-            self.reset_envelope();
-        } else if self.decay > 0 {
-            self.decay -= 1;
+            sweep: Sweep::new(channel),
+            ..Default::default()
         }
     }
 
@@ -53,10 +40,6 @@ impl Pulse {
         if !self.length_counter_halt && self.length_counter > 0 {
             self.length_counter -= 1;
         }
-    }
-
-    pub fn reset_envelope(&mut self) {
-        self.decay = self.constant_volume;
     }
 }
 
@@ -67,11 +50,12 @@ impl AudioCallback for Pulse {
         let frequency = 1789773.0 / (16.0 * (self.timer + 1) as f32);
         let phase_inc = frequency / self.spec_freq;
         for x in out.iter_mut() {
-            if self.enabled && self.length_counter > 0 && self.timer >= 8 {
-                // let wave = if self.phase <= 0.5 { 1.0 } else { -1.0 };
-                let wave =
-                    DUTY_CYCLES[self.duty_cycle as usize][(self.phase * 8.0) as usize] as f32;
-                let decay = self.decay as f32 / 15.0;
+            if self.enabled && self.length_counter > 0 && self.timer >= 8 && !self.sweep.mute() {
+                let wave = ((DUTY_CYCLES[self.duty_cycle as usize][(self.phase * 8.0) as usize]
+                    as f32)
+                    * 2.0)
+                    - 1.0;
+                let decay = self.envelope.volume() as f32 / 15.0;
                 *x = decay * wave * self.volume * MASTER_VOLUME;
                 self.phase = (self.phase + phase_inc) % 1.0;
             } else {

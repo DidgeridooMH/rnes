@@ -1,5 +1,8 @@
 mod pulse;
 use pulse::Pulse;
+mod envelope;
+mod sweep;
+use sweep::SweepSetup;
 
 use std::time::{Duration, Instant};
 
@@ -21,6 +24,7 @@ pub struct APU {
     sequencer_mode: bool,
     last_frame: Instant,
     interrupt_inhibit: bool,
+    half_frame_flag: bool,
 }
 
 impl Default for APU {
@@ -35,14 +39,14 @@ impl Default for APU {
 
         let pulse_device0 = audio_subsystem
             .open_playback(None, &desired_spec, |spec| {
-                Pulse::new(spec.freq as f32, 0.0)
+                Pulse::new(spec.freq as f32, 0.0, 0)
             })
             .unwrap();
         pulse_device0.resume();
 
         let pulse_device1 = audio_subsystem
             .open_playback(None, &desired_spec, |spec| {
-                Pulse::new(spec.freq as f32, 0.5)
+                Pulse::new(spec.freq as f32, 0.5, 1)
             })
             .unwrap();
         pulse_device1.resume();
@@ -54,6 +58,7 @@ impl Default for APU {
             sequencer_mode: false,
             last_frame: Instant::now(),
             interrupt_inhibit: false,
+            half_frame_flag: false,
         }
     }
 }
@@ -63,9 +68,17 @@ impl APU {
         self.cycle += cycles;
         if self.cycle >= FRAME_COUNTER_FREQ {
             self.step_frame_counter();
-            self.pulse[0].lock().step();
-            self.pulse[1].lock().step();
             self.cycle %= FRAME_COUNTER_FREQ;
+
+            if self.half_frame_flag {
+                for pulse in &mut self.pulse {
+                    let mut pulse = pulse.lock();
+                    if let Some(new_timer) = pulse.sweep.step() {
+                        pulse.timer = new_timer;
+                    }
+                }
+            }
+            self.half_frame_flag = !self.half_frame_flag;
         }
     }
 
@@ -73,30 +86,39 @@ impl APU {
         while self.last_frame.elapsed() < Duration::from_micros(16666 / 4) {}
         self.last_frame = Instant::now();
 
-        if self.sequencer_mode {
-            self.frame_counter = (self.frame_counter + 1) % 5;
-            match self.frame_counter {
-                1 | 4 => {
-                    self.pulse[0].lock().step_length_counter();
-                    self.pulse[1].lock().step_length_counter();
-                }
-                _ => {}
-            }
-        } else {
-            self.frame_counter = (self.frame_counter + 1) % 4;
-            match self.frame_counter {
-                1 | 3 => {
-                    self.pulse[0].lock().step_length_counter();
-                    self.pulse[1].lock().step_length_counter();
-                }
-                _ => {}
-            }
+        if !self.sequencer_mode || self.frame_counter != 3 {
+            self.pulse[0].lock().envelope.step();
+            self.pulse[1].lock().envelope.step();
         }
+
+        if self.frame_counter == 1
+            || (self.sequencer_mode && self.frame_counter == 4)
+            || (!self.sequencer_mode && self.frame_counter == 3)
+        {
+            self.pulse[0].lock().step_length_counter();
+            self.pulse[1].lock().step_length_counter();
+        }
+
+        self.frame_counter = if self.sequencer_mode {
+            (self.frame_counter + 1) % 5
+        } else {
+            (self.frame_counter + 1) % 4
+        };
     }
 }
 
 impl Addressable for APU {
-    fn read_byte(&mut self, _address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> u8 {
+        if address == 0x4015 {
+            let mut status = 0u8;
+            if self.pulse[0].lock().length_counter > 0 {
+                status |= 1;
+            }
+            if self.pulse[1].lock().length_counter > 0 {
+                status |= 2;
+            }
+            return status;
+        }
         0
     }
 
@@ -109,9 +131,22 @@ impl Addressable for APU {
                     self.pulse[1].lock()
                 };
                 pulse.length_counter_halt = data & 0x20 > 0;
-                pulse.use_constant_volume = data & 0x10 > 0;
-                pulse.constant_volume = data & 0xF;
                 pulse.duty_cycle = data >> 6;
+
+                pulse.envelope.should_loop = data & 0x20 > 0;
+                pulse.envelope.constant_volume = data & 0x10 > 0;
+                pulse.envelope.envelope = data & 0xF;
+                pulse.envelope.reload();
+            }
+            0x4001 | 0x4005 => {
+                let mut pulse = if address == 0x4001 {
+                    self.pulse[0].lock()
+                } else {
+                    self.pulse[1].lock()
+                };
+                pulse.sweep.setup(SweepSetup(data));
+                let timer = pulse.timer;
+                pulse.sweep.reset_target(timer);
             }
             0x4002 | 0x4006 => {
                 let mut pulse = if address == 0x4002 {
@@ -120,6 +155,8 @@ impl Addressable for APU {
                     self.pulse[1].lock()
                 };
                 pulse.timer = (pulse.timer & 0xFF00) | data as u16;
+                let timer = pulse.timer;
+                pulse.sweep.reset_target(timer);
             }
             0x4003 | 0x4007 => {
                 let mut pulse = if address == 0x4003 {
@@ -129,7 +166,13 @@ impl Addressable for APU {
                 };
                 pulse.length_counter = LENGTH_TABLE[(data >> 3) as usize];
                 pulse.timer = (pulse.timer & 0xFF) | ((data & 0b111) as u16) << 8;
-                pulse.reset_envelope();
+                self.frame_counter = 0;
+
+                pulse.envelope.reload();
+
+                pulse.phase = if address == 0x4003 { 0.0 } else { 0.5 };
+                let timer = pulse.timer;
+                pulse.sweep.reset_target(timer);
             }
             0x4015 => {
                 self.pulse[0].lock().enabled = data & 1 > 0;
@@ -138,6 +181,7 @@ impl Addressable for APU {
             0x4017 => {
                 self.sequencer_mode = data & 0x80 > 0;
                 self.interrupt_inhibit = data & 0x40 > 0;
+                self.frame_counter = 0;
             }
             _ => {}
         }
