@@ -46,6 +46,16 @@ impl Pulse {
     }
 }
 
+fn triangle_wave(x: f32) -> f32 {
+    if x < 0.25 {
+        f32::abs(2.0 * x)
+    } else if x < 0.75 {
+        1.0 - f32::abs(2.0 * x)
+    } else {
+        f32::abs(1.0 - 2.0 * x) - 1.0
+    }
+}
+
 impl AudioCallback for Pulse {
     type Channel = f32;
 
