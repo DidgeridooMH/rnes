@@ -41,7 +41,7 @@ impl MainWindow {
             .with_title("RNES")
             .with_inner_size(PhysicalSize::new(
                 NATIVE_RESOLUTION.width * SCALING_FACTOR,
-                NATIVE_RESOLUTION.height * SCALING_FACTOR,
+                (NATIVE_RESOLUTION.height - 16) * SCALING_FACTOR,
             ))
             .with_resize_increments(NATIVE_RESOLUTION)
             .build(event_loop)
@@ -137,7 +137,7 @@ impl MainWindow {
         let screen_texture = device.create_texture(&wgpu::TextureDescriptor {
             size: wgpu::Extent3d {
                 width: NATIVE_RESOLUTION.width,
-                height: NATIVE_RESOLUTION.height,
+                height: NATIVE_RESOLUTION.height - 16,
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
@@ -320,15 +320,15 @@ impl MainWindow {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            bytemuck::cast_slice(screen_buffer),
+            bytemuck::cast_slice(&screen_buffer[(8 * NATIVE_RESOLUTION.width as usize)..]),
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(4 * NATIVE_RESOLUTION.width),
-                rows_per_image: Some(NATIVE_RESOLUTION.height),
+                rows_per_image: Some(NATIVE_RESOLUTION.height - 16),
             },
             wgpu::Extent3d {
                 width: NATIVE_RESOLUTION.width,
-                height: NATIVE_RESOLUTION.height,
+                height: NATIVE_RESOLUTION.height - 16,
                 depth_or_array_layers: 1,
             },
         );
