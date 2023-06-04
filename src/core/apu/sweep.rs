@@ -47,7 +47,7 @@ impl Sweep {
             self.divider = self.period;
             self.reload = false;
 
-            if self.enable && !self.mute() {
+            if self.enable && !self.mute() && self.target < 0x7FF {
                 let target = self.target;
                 self.reset_target(target);
                 return Some(target);

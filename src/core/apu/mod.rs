@@ -4,6 +4,9 @@ mod envelope;
 mod sweep;
 use sweep::SweepSetup;
 mod length_counter;
+mod triangle;
+use triangle::Triangle;
+mod linear_counter;
 
 use std::time::{Duration, Instant};
 
@@ -15,6 +18,7 @@ const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
 
 pub struct APU {
     pulse: [AudioDevice<Pulse>; 2],
+    triangle: AudioDevice<Triangle>,
     cycle: usize,
     frame_counter: u8,
     sequencer_mode: bool,
@@ -47,8 +51,14 @@ impl Default for APU {
             .unwrap();
         pulse_device1.resume();
 
+        let triangle = audio_subsystem
+            .open_playback(None, &desired_spec, |spec| Triangle::new(spec.freq as f32))
+            .unwrap();
+        triangle.resume();
+
         Self {
             pulse: [pulse_device0, pulse_device1],
+            triangle,
             frame_counter: 0,
             cycle: 0,
             sequencer_mode: false,
@@ -85,6 +95,7 @@ impl APU {
         if !self.sequencer_mode || self.frame_counter != 3 {
             self.pulse[0].lock().envelope.step();
             self.pulse[1].lock().envelope.step();
+            self.triangle.lock().linear_counter.step();
         }
 
         if self.frame_counter == 1
@@ -93,6 +104,8 @@ impl APU {
         {
             self.pulse[0].lock().length_counter.step();
             self.pulse[1].lock().length_counter.step();
+
+            self.triangle.lock().length_counter.step();
         }
 
         self.frame_counter = if self.sequencer_mode {
@@ -112,6 +125,9 @@ impl Addressable for APU {
             }
             if !self.pulse[1].lock().length_counter.mute() {
                 status |= 2;
+            }
+            if !self.triangle.lock().length_counter.mute() {
+                status |= 4;
             }
             return status;
         }
@@ -170,9 +186,27 @@ impl Addressable for APU {
                 let timer = pulse.timer;
                 pulse.sweep.reset_target(timer);
             }
+            0x4008 => {
+                let mut triangle = self.triangle.lock();
+                triangle.length_counter.halt = data & 0x80 > 0;
+                triangle.linear_counter.control = data & 0x80 > 0;
+                triangle.linear_counter.reload(data & 0x7F);
+            }
+            0x400A => {
+                let mut triangle = self.triangle.lock();
+                triangle.timer = (triangle.timer & 0xFF00) | data as u16;
+                triangle.linear_counter.reload_current();
+            }
+            0x400B => {
+                let mut triangle = self.triangle.lock();
+                triangle.timer = (triangle.timer & 0xFF) | ((data & 0b111) as u16) << 8;
+                triangle.length_counter.set_counter(data >> 3);
+                triangle.linear_counter.reload_current();
+            }
             0x4015 => {
                 self.pulse[0].lock().set_enabled(data & 1 > 0);
                 self.pulse[1].lock().set_enabled(data & 2 > 0);
+                self.triangle.lock().set_enabled(data & 4 > 0);
             }
             0x4017 => {
                 self.sequencer_mode = data & 0x80 > 0;
