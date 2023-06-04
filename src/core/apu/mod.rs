@@ -33,7 +33,7 @@ impl Default for APU {
         let audio_subsystem = sdl_context.audio().unwrap();
         let desired_spec = AudioSpecDesired {
             freq: Some(44100),
-            channels: Some(1),
+            channels: Some(2),
             samples: Some(64),
         };
 
