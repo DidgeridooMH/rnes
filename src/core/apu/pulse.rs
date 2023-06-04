@@ -1,4 +1,4 @@
-use super::{envelope::Envelope, sweep::Sweep, MASTER_VOLUME};
+use super::{envelope::Envelope, length_counter::LengthCounter, sweep::Sweep, MASTER_VOLUME};
 use sdl2::audio::AudioCallback;
 
 const DUTY_CYCLES: [[u32; 8]; 4] = [
@@ -16,13 +16,12 @@ pub struct Pulse {
 
     pub enabled: bool,
 
-    pub length_counter: u8,
-    pub length_counter_halt: bool,
     pub timer: u16,
     pub duty_cycle: u8,
 
     pub sweep: Sweep,
     pub envelope: Envelope,
+    pub length_counter: LengthCounter,
 
     channel: u8,
 }
@@ -39,10 +38,9 @@ impl Pulse {
         }
     }
 
-    pub fn step_length_counter(&mut self) {
-        if !self.length_counter_halt && self.length_counter > 0 {
-            self.length_counter -= 1;
-        }
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.length_counter.set_enabled(enabled);
     }
 }
 
@@ -63,7 +61,8 @@ impl AudioCallback for Pulse {
         let frequency = 1789773.0 / (16.0 * (self.timer + 1) as f32);
         let phase_inc = frequency / self.spec_freq;
         for (index, x) in out.iter_mut().enumerate() {
-            if self.enabled && self.length_counter > 0 && self.timer >= 8 && !self.sweep.mute() {
+            if self.enabled && !self.length_counter.mute() && self.timer >= 8 && !self.sweep.mute()
+            {
                 let wave = ((DUTY_CYCLES[self.duty_cycle as usize][(self.phase * 8.0) as usize]
                     as f32)
                     * 2.0)

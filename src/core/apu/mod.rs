@@ -3,6 +3,7 @@ use pulse::Pulse;
 mod envelope;
 mod sweep;
 use sweep::SweepSetup;
+mod length_counter;
 
 use std::time::{Duration, Instant};
 
@@ -11,11 +12,6 @@ use sdl2::audio::{AudioDevice, AudioSpecDesired};
 
 pub const MASTER_VOLUME: f32 = 0.05;
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
-
-const LENGTH_TABLE: [u8; 32] = [
-    10, 254, 20, 2, 40, 4, 80, 6, 160, 8, 60, 10, 14, 12, 26, 14, 12, 16, 24, 18, 48, 20, 96, 22,
-    192, 24, 72, 26, 16, 28, 32, 30,
-];
 
 pub struct APU {
     pulse: [AudioDevice<Pulse>; 2],
@@ -34,7 +30,7 @@ impl Default for APU {
         let desired_spec = AudioSpecDesired {
             freq: Some(96000),
             channels: Some(2),
-            samples: Some(64),
+            samples: Some(128),
         };
 
         let pulse_device0 = audio_subsystem
@@ -95,8 +91,8 @@ impl APU {
             || (self.sequencer_mode && self.frame_counter == 4)
             || (!self.sequencer_mode && self.frame_counter == 3)
         {
-            self.pulse[0].lock().step_length_counter();
-            self.pulse[1].lock().step_length_counter();
+            self.pulse[0].lock().length_counter.step();
+            self.pulse[1].lock().length_counter.step();
         }
 
         self.frame_counter = if self.sequencer_mode {
@@ -111,10 +107,10 @@ impl Addressable for APU {
     fn read_byte(&mut self, address: u16) -> u8 {
         if address == 0x4015 {
             let mut status = 0u8;
-            if self.pulse[0].lock().length_counter > 0 {
+            if !self.pulse[0].lock().length_counter.mute() {
                 status |= 1;
             }
-            if self.pulse[1].lock().length_counter > 0 {
+            if !self.pulse[1].lock().length_counter.mute() {
                 status |= 2;
             }
             return status;
@@ -130,7 +126,7 @@ impl Addressable for APU {
                 } else {
                     self.pulse[1].lock()
                 };
-                pulse.length_counter_halt = data & 0x20 > 0;
+                pulse.length_counter.halt = data & 0x20 > 0;
                 pulse.duty_cycle = data >> 6;
 
                 pulse.envelope.should_loop = data & 0x20 > 0;
@@ -164,7 +160,7 @@ impl Addressable for APU {
                 } else {
                     self.pulse[1].lock()
                 };
-                pulse.length_counter = LENGTH_TABLE[(data >> 3) as usize];
+                pulse.length_counter.set_counter(data >> 3);
                 pulse.timer = (pulse.timer & 0xFF) | ((data & 0b111) as u16) << 8;
                 self.frame_counter = 0;
 
@@ -175,8 +171,8 @@ impl Addressable for APU {
                 pulse.sweep.reset_target(timer);
             }
             0x4015 => {
-                self.pulse[0].lock().enabled = data & 1 > 0;
-                self.pulse[1].lock().enabled = data & 2 > 0;
+                self.pulse[0].lock().set_enabled(data & 1 > 0);
+                self.pulse[1].lock().set_enabled(data & 2 > 0);
             }
             0x4017 => {
                 self.sequencer_mode = data & 0x80 > 0;

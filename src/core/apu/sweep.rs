@@ -36,7 +36,7 @@ impl Sweep {
     pub fn setup(&mut self, setup: SweepSetup) {
         self.enable = setup.enable();
         self.period = setup.period();
-        self.divider = setup.period();
+        self.divider = setup.period() + 1;
         self.negate = setup.negate();
         self.shift = setup.shift() as u16;
         self.reload = true;
