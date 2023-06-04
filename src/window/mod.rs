@@ -14,6 +14,13 @@ pub const NATIVE_RESOLUTION: PhysicalSize<u32> = PhysicalSize::new(256, 240);
 pub const BYTES_PER_PIXEL: usize = 4;
 const SCALING_FACTOR: u32 = 3;
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+struct WindowUniform {
+    region_aspect: f32,
+    window_aspect: f32,
+}
+
 pub struct MainWindow {
     pub window: Window,
     surface: Surface,
@@ -21,6 +28,8 @@ pub struct MainWindow {
     queue: Queue,
     render_pipeline: RenderPipeline,
     vertex_buffer: Buffer,
+    uniform_buffer: Buffer,
+    uniform_bind_group: wgpu::BindGroup,
     screen_texture: Texture,
     texture_bind_group: wgpu::BindGroup,
     config: SurfaceConfiguration,
@@ -90,6 +99,39 @@ impl MainWindow {
             label: Some("Screen Vertices"),
             contents: bytemuck::cast_slice(vertex::VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Aspect Ratio Buffer"),
+            contents: bytemuck::cast_slice(&[WindowUniform {
+                window_aspect: window.inner_size().width as f32 / window.inner_size().height as f32,
+                region_aspect: NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+            }]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let window_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: None,
+            });
+
+        let window_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &window_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: uniform_buffer.as_entire_binding(),
+            }],
+            label: None,
         });
 
         let screen_texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -162,7 +204,7 @@ impl MainWindow {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &window_bind_group_layout],
                 push_constant_ranges: &[],
             });
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -207,6 +249,8 @@ impl MainWindow {
             queue,
             render_pipeline,
             vertex_buffer,
+            uniform_buffer,
+            uniform_bind_group: window_bind_group,
             screen_texture,
             texture_bind_group,
             config,
@@ -264,6 +308,7 @@ impl MainWindow {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.texture_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.uniform_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.draw(0..(vertex::VERTICES.len() as u32), 0..1);
         }
@@ -299,6 +344,15 @@ impl MainWindow {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
+            self.queue.write_buffer(
+                &self.uniform_buffer,
+                0,
+                bytemuck::cast_slice(&[WindowUniform {
+                    window_aspect: self.window.inner_size().width as f32
+                        / self.window.inner_size().height as f32,
+                    region_aspect: NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+                }]),
+            )
         }
     }
 }

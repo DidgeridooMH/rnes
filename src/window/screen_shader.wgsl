@@ -1,3 +1,10 @@
+struct WindowUniform {
+  region_aspect: f32,
+  window_aspect: f32
+};
+@group(1) @binding(0)
+var<uniform> window: WindowUniform;
+
 struct VertexInput {
   @location(0) position: vec3<f32>
 }
@@ -10,7 +17,21 @@ struct VertexOutput {
 @vertex
 fn vs_main(screen_coords: VertexInput) -> VertexOutput {
   var out: VertexOutput;
-  out.clip_position = vec4<f32>(screen_coords.position, 1.0);
+
+  var y_scale : f32 = 1.0;
+  var x_scale : f32 = 1.0;
+
+  if (window.window_aspect <= window.region_aspect) {
+    y_scale = window.window_aspect / window.region_aspect;
+  } else {
+    x_scale = window.region_aspect / window.window_aspect;
+  }
+
+  out.clip_position = vec4<f32>(
+      screen_coords.position.x * x_scale,
+      screen_coords.position.y *y_scale,
+      screen_coords.position.z,
+      1.0);
   out.tex_coords = (screen_coords.position.xy + 1.0) * 0.5;
   out.tex_coords.y = (1.0 - out.tex_coords.y);
   return out;
