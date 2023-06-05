@@ -15,7 +15,6 @@ use std::time::{Duration, Instant};
 use crate::core::Addressable;
 use sdl2::audio::{AudioQueue, AudioSpecDesired};
 
-pub const MASTER_VOLUME: f32 = 0.05;
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
 const SAMPLE_BUFFER_LENGTH: usize = 735 * 2;
 
@@ -43,7 +42,7 @@ impl Default for APU {
         let desired_spec = AudioSpecDesired {
             freq: Some(44100),
             channels: Some(1),
-            samples: Some(64),
+            samples: None,
         };
 
         let sound_sampler = audio_subsystem.open_queue(None, &desired_spec).unwrap();
@@ -93,8 +92,12 @@ impl APU {
                 let tnd_sample =
                     159.79 / ((1.0 / ((t_sample / 8227.0) + (n_sample / 12241.0))) + 100.0);
 
-                self.sample_buffer[self.sample_cursor] = pulse_sample + tnd_sample;
-                self.sample_cursor += 1;
+                if self.sound_sampler.size() / (SAMPLE_BUFFER_LENGTH as u32)
+                    < (0.5 / (SAMPLE_BUFFER_LENGTH as f32 / 44100.0)).ceil() as u32
+                {
+                    self.sample_buffer[self.sample_cursor] = pulse_sample + tnd_sample;
+                    self.sample_cursor += 1;
+                }
                 if self.sample_cursor == self.sample_buffer.len() {
                     self.sound_sampler.queue_audio(&self.sample_buffer).unwrap();
                     self.sample_cursor = 0;
@@ -102,10 +105,6 @@ impl APU {
             }
 
             if self.cycle % FRAME_COUNTER_FREQ == 0 {
-                if self.sample_starvation_change {
-                    println!("{}", self.sample_starvation);
-                    self.sample_starvation_change = false;
-                }
                 self.step_frame_counter();
 
                 if self.half_frame_flag {
