@@ -95,7 +95,7 @@ impl APU {
                 if self.sound_sampler.size() / (SAMPLE_BUFFER_LENGTH as u32)
                     < (0.5 / (SAMPLE_BUFFER_LENGTH as f32 / 44100.0)).ceil() as u32
                 {
-                    self.sample_buffer[self.sample_cursor] = pulse_sample + tnd_sample;
+                    self.sample_buffer[self.sample_cursor] = (pulse_sample + tnd_sample) * 3.0;
                     self.sample_cursor += 1;
                 }
                 if self.sample_cursor == self.sample_buffer.len() {
