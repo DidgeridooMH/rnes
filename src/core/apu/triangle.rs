@@ -1,62 +1,39 @@
-use sdl2::audio::AudioCallback;
+use super::{length_counter::LengthCounter, linear_counter::LinearCounter};
 
-use super::{length_counter::LengthCounter, linear_counter::LinearCounter, MASTER_VOLUME};
+const DUTY_TABLE: [u8; 32] = [
+    15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,
+    13, 14, 15,
+];
 
 #[derive(Default)]
 pub struct Triangle {
-    spec_freq: f32,
-    pub phase: f32,
-    volume: f32,
-
+    pub duty_timer: usize,
     pub enabled: bool,
-
     pub timer: u16,
-
+    pub timer_reload: u16,
     pub length_counter: LengthCounter,
     pub linear_counter: LinearCounter,
 }
 
 impl Triangle {
-    pub fn new(spec_freq: f32) -> Self {
-        Self {
-            spec_freq,
-            volume: 1.8,
-            ..Default::default()
-        }
-    }
-
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         self.length_counter.set_enabled(enabled);
     }
-}
 
-fn triangle_wave(x: f32) -> f32 {
-    if x < 0.25 {
-        f32::abs(2.0 * x)
-    } else if x < 0.75 {
-        1.0 - f32::abs(2.0 * x)
-    } else {
-        f32::abs(1.0 - 2.0 * x) - 1.0
+    pub fn tick(&mut self) {
+        self.timer -= 1;
+        if self.timer == 0 {
+            self.duty_timer = (self.duty_timer + 1) % DUTY_TABLE.len();
+            self.timer = self.timer_reload;
+        }
     }
-}
 
-impl AudioCallback for Triangle {
-    type Channel = f32;
-
-    fn callback(&mut self, out: &mut [f32]) {
-        let frequency = 1789773.0 / (32.0 * (self.timer + 1) as f32);
-        let phase_inc = frequency / self.spec_freq;
-        for (index, x) in out.iter_mut().enumerate() {
-            if self.enabled && !self.length_counter.mute() && !self.linear_counter.mute() {
-                let wave = triangle_wave(self.phase);
-                *x = wave * self.volume * MASTER_VOLUME;
-                if index % 2 == 0 {
-                    self.phase = (self.phase + phase_inc) % 1.0;
-                }
-            } else {
-                *x = 0.0;
-            }
+    pub fn get_sample(&self) -> f32 {
+        if self.enabled && !self.length_counter.mute() && !self.linear_counter.mute() {
+            DUTY_TABLE[self.duty_timer] as f32 / 15.0
+        } else {
+            0.0
         }
     }
 }

@@ -17,7 +17,7 @@ impl LengthCounter {
         }
     }
 
-    pub fn mute(&mut self) -> bool {
+    pub fn mute(&self) -> bool {
         self.counter == 0
     }
 
