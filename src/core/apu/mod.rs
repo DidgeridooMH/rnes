@@ -175,7 +175,7 @@ impl Addressable for APU {
     fn write_byte(&mut self, address: u16, data: u8) {
         match address {
             0x4000 | 0x4004 => {
-                let mut pulse = if address == 0x4000 {
+                let pulse = if address == 0x4000 {
                     &mut self.pulse[0]
                 } else {
                     &mut self.pulse[1]
@@ -199,7 +199,7 @@ impl Addressable for APU {
                 pulse.sweep.reset_target(timer);
             }
             0x4002 | 0x4006 => {
-                let mut pulse = if address == 0x4002 {
+                let pulse = if address == 0x4002 {
                     &mut self.pulse[0]
                 } else {
                     &mut self.pulse[1]
@@ -210,7 +210,7 @@ impl Addressable for APU {
                 pulse.sweep.reset_target(timer);
             }
             0x4003 | 0x4007 => {
-                let mut pulse = if address == 0x4003 {
+                let pulse = if address == 0x4003 {
                     &mut self.pulse[0]
                 } else {
                     &mut self.pulse[1]

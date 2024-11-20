@@ -72,7 +72,8 @@ async fn main() {
                 }
             }
 
-            if let Err(e) = nes.emulate(29780, &mut screen, &window) {
+            const CPU_CYCLES_PER_FRAME: usize = 29780;
+            if let Err(e) = nes.emulate(CPU_CYCLES_PER_FRAME, &mut screen, &window) {
                 eprintln!("{e}");
                 *control_flow = ControlFlow::Exit;
             }

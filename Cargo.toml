@@ -8,7 +8,7 @@ bitfield = "0.13.2"
 bytemuck = { version = "1.13.1", features = ["derive"] }
 clap = { version = "4.3.0", features = ["derive"] }
 gilrs = "0.10.2"
-sdl2 = { version = "0.35.2" }
+sdl2 = { version = "0.35.2", features= ["bundled", "static-link"] }
 tokio = { version = "1.28.1", features = ["rt-multi-thread", "macros", "time", "sync"] }
 wgpu = "0.16.0"
 winit = "0.28.6"
