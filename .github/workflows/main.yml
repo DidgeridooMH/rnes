@@ -16,6 +16,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Install dependencies
+      run: apt-get update && apt-get install -y libudev-dev pkg-config
+
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:
