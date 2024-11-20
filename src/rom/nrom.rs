@@ -25,9 +25,7 @@ impl Nrom {
     ) {
         let rom = Rc::new(RefCell::new(Self {
             prg_ram: [0; PRG_RAM_SIZE],
-            prg_rom: data[0..PRG_ROM_SIZE * rom_banks as usize]
-                .try_into()
-                .unwrap(),
+            prg_rom: data[0..PRG_ROM_SIZE * rom_banks as usize].into(),
             rom_banks,
         }));
         bus.borrow_mut().register_region(0x6000..=0xFFFF, rom);
