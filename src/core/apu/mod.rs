@@ -2,6 +2,7 @@ mod pulse;
 use pulse::Pulse;
 mod envelope;
 mod sweep;
+use sdl3::audio::{AudioFormat, AudioSpec, AudioStreamOwner};
 use sweep::SweepSetup;
 mod length_counter;
 mod triangle;
@@ -13,7 +14,6 @@ use noise::Noise;
 use std::time::{Duration, Instant};
 
 use crate::core::Addressable;
-use sdl2::audio::{AudioQueue, AudioSpecDesired};
 
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
 const SAMPLE_BUFFER_LENGTH: usize = 735 * 2;
@@ -22,7 +22,7 @@ pub struct APU {
     pulse: [Pulse; 2],
     triangle: Triangle,
     noise: Noise,
-    sound_sampler: AudioQueue<f32>,
+    sound_sampler: AudioStreamOwner,
     cycle: usize,
     frame_counter: u8,
     sequencer_mode: bool,
@@ -37,16 +37,18 @@ pub struct APU {
 
 impl Default for APU {
     fn default() -> Self {
-        let sdl_context = sdl2::init().unwrap();
+        let sdl_context = sdl3::init().unwrap();
         let audio_subsystem = sdl_context.audio().unwrap();
-        let desired_spec = AudioSpecDesired {
+
+        let desired_spec = AudioSpec {
             freq: Some(44100),
             channels: Some(1),
-            samples: None,
+            format: Some(AudioFormat::f32_sys()),
         };
 
-        let sound_sampler = audio_subsystem.open_queue(None, &desired_spec).unwrap();
-        sound_sampler.resume();
+        let device = audio_subsystem.open_playback_device(&desired_spec).unwrap();
+        let sound_sampler = device.open_device_stream(Some(&desired_spec)).unwrap();
+        sound_sampler.resume().unwrap();
 
         Self {
             pulse: [Pulse::new(0), Pulse::new(1)],
@@ -79,7 +81,7 @@ impl APU {
             self.triangle.tick();
 
             if self.cycle % 40 == 0 {
-                if self.sound_sampler.size() == 0 {
+                if self.sound_sampler.queued_bytes().unwrap() == 0 {
                     self.sample_starvation += 1;
                     self.sample_starvation_change = true;
                 }
@@ -92,14 +94,16 @@ impl APU {
                 let tnd_sample =
                     159.79 / ((1.0 / ((t_sample / 8227.0) + (n_sample / 12241.0))) + 100.0);
 
-                if self.sound_sampler.size() / (SAMPLE_BUFFER_LENGTH as u32)
-                    < (0.5 / (SAMPLE_BUFFER_LENGTH as f32 / 44100.0)).ceil() as u32
+                if self.sound_sampler.queued_bytes().unwrap() / (SAMPLE_BUFFER_LENGTH as i32)
+                    < ((0.5 / (SAMPLE_BUFFER_LENGTH as f32 / 44100.0)).ceil() as i32)
                 {
                     self.sample_buffer[self.sample_cursor] = (pulse_sample + tnd_sample) * 3.0;
                     self.sample_cursor += 1;
                 }
                 if self.sample_cursor == self.sample_buffer.len() {
-                    self.sound_sampler.queue_audio(&self.sample_buffer).unwrap();
+                    self.sound_sampler
+                        .put_data_f32(&self.sample_buffer)
+                        .unwrap();
                     self.sample_cursor = 0;
                 }
             }

@@ -3,3 +3,4 @@
 roms/
 nes-test-roms
 *.log
+vcpkg_installed
