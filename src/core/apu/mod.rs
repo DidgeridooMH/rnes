@@ -2,7 +2,6 @@ mod pulse;
 use pulse::Pulse;
 mod envelope;
 mod sweep;
-use sdl3::audio::{AudioFormat, AudioSpec, AudioStreamOwner};
 use sweep::SweepSetup;
 mod length_counter;
 mod triangle;
@@ -10,61 +9,40 @@ use triangle::Triangle;
 mod linear_counter;
 mod noise;
 use noise::Noise;
+mod dmc;
+use dmc::Dmc;
+mod timer;
 
-use std::time::{Duration, Instant};
-
-use crate::core::Addressable;
+use crate::{audio::AudioOutput, core::Addressable};
 
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
-const SAMPLE_BUFFER_LENGTH: usize = 735 * 2;
 
 pub struct APU {
     pulse: [Pulse; 2],
     triangle: Triangle,
     noise: Noise,
-    sound_sampler: AudioStreamOwner,
+    dmc: Dmc,
     cycle: usize,
     frame_counter: u8,
     sequencer_mode: bool,
-    last_frame: Instant,
     interrupt_inhibit: bool,
     half_frame_flag: bool,
-    sample_buffer: [f32; SAMPLE_BUFFER_LENGTH],
-    sample_cursor: usize,
-    sample_starvation: usize,
-    sample_starvation_change: bool,
+    audio_output: AudioOutput,
 }
 
 impl Default for APU {
     fn default() -> Self {
-        let sdl_context = sdl3::init().unwrap();
-        let audio_subsystem = sdl_context.audio().unwrap();
-
-        let desired_spec = AudioSpec {
-            freq: Some(44100),
-            channels: Some(1),
-            format: Some(AudioFormat::f32_sys()),
-        };
-
-        let device = audio_subsystem.open_playback_device(&desired_spec).unwrap();
-        let sound_sampler = device.open_device_stream(Some(&desired_spec)).unwrap();
-        sound_sampler.resume().unwrap();
-
         Self {
             pulse: [Pulse::new(0), Pulse::new(1)],
             triangle: Triangle::default(),
             noise: Noise::new(),
-            sound_sampler,
+            dmc: Dmc::default(),
             frame_counter: 0,
             cycle: 0,
             sequencer_mode: false,
-            last_frame: Instant::now(),
             interrupt_inhibit: false,
             half_frame_flag: false,
-            sample_buffer: [0.0; SAMPLE_BUFFER_LENGTH],
-            sample_cursor: 0,
-            sample_starvation: 0,
-            sample_starvation_change: false,
+            audio_output: AudioOutput::new(),
         }
     }
 }
@@ -77,36 +55,21 @@ impl APU {
                 self.pulse[0].tick();
                 self.pulse[1].tick();
                 self.noise.tick();
+                self.dmc.tick();
             }
             self.triangle.tick();
 
-            if self.cycle % 40 == 0 {
-                if self.sound_sampler.queued_bytes().unwrap() == 0 {
-                    self.sample_starvation += 1;
-                    self.sample_starvation_change = true;
-                }
-                let p0_sample = self.pulse[0].get_sample();
-                let p1_sample = self.pulse[1].get_sample();
-                let pulse_sample = 95.88 / ((8128.0 / (p0_sample + p1_sample)) + 100.0);
+            let p0_sample = self.pulse[0].get_sample();
+            let p1_sample = self.pulse[1].get_sample();
+            let pulse_sample = 95.88 / ((8128.0 / (p0_sample + p1_sample)) + 100.0);
 
-                let t_sample = self.triangle.get_sample();
-                let n_sample = self.noise.get_sample();
-                let tnd_sample =
-                    159.79 / ((1.0 / ((t_sample / 8227.0) + (n_sample / 12241.0))) + 100.0);
+            let t_sample = self.triangle.get_sample();
+            let n_sample = self.noise.get_sample();
+            let tnd_sample =
+                159.79 / ((1.0 / ((t_sample / 8227.0) + (n_sample / 12241.0))) + 100.0);
 
-                if self.sound_sampler.queued_bytes().unwrap() / (SAMPLE_BUFFER_LENGTH as i32)
-                    < ((0.5 / (SAMPLE_BUFFER_LENGTH as f32 / 44100.0)).ceil() as i32)
-                {
-                    self.sample_buffer[self.sample_cursor] = (pulse_sample + tnd_sample) * 3.0;
-                    self.sample_cursor += 1;
-                }
-                if self.sample_cursor == self.sample_buffer.len() {
-                    self.sound_sampler
-                        .put_data_f32(&self.sample_buffer)
-                        .unwrap();
-                    self.sample_cursor = 0;
-                }
-            }
+            self.audio_output
+                .push_sample((pulse_sample + tnd_sample) * 3.0);
 
             if self.cycle % FRAME_COUNTER_FREQ == 0 {
                 self.step_frame_counter();
@@ -114,8 +77,7 @@ impl APU {
                 if self.half_frame_flag {
                     for pulse in &mut self.pulse {
                         if let Some(new_timer) = pulse.sweep.step() {
-                            pulse.timer_reload = new_timer;
-                            pulse.timer = new_timer;
+                            pulse.timer.set_period(new_timer);
                         }
                     }
                 }
@@ -125,9 +87,6 @@ impl APU {
     }
 
     fn step_frame_counter(&mut self) {
-        while self.last_frame.elapsed() < Duration::from_micros(16666 / 4) {}
-        self.last_frame = Instant::now();
-
         if !self.sequencer_mode || self.frame_counter != 3 {
             self.pulse[0].envelope.step();
             self.pulse[1].envelope.step();
@@ -199,7 +158,7 @@ impl Addressable for APU {
                     &mut self.pulse[1]
                 };
                 pulse.sweep.setup(SweepSetup(data));
-                let timer = pulse.timer_reload;
+                let timer = pulse.timer.get_period();
                 pulse.sweep.reset_target(timer);
             }
             0x4002 | 0x4006 => {
@@ -208,10 +167,10 @@ impl Addressable for APU {
                 } else {
                     &mut self.pulse[1]
                 };
-                pulse.timer_reload = (pulse.timer_reload & 0xFF00) | data as u16;
-                pulse.timer = pulse.timer_reload;
-                let timer = pulse.timer_reload;
-                pulse.sweep.reset_target(timer);
+
+                let new_timer_period = (pulse.timer.get_period() & 0xFF00) | data as u16;
+                pulse.timer.set_period(new_timer_period);
+                pulse.sweep.reset_target(new_timer_period);
             }
             0x4003 | 0x4007 => {
                 let pulse = if address == 0x4003 {
@@ -220,15 +179,15 @@ impl Addressable for APU {
                     &mut self.pulse[1]
                 };
                 pulse.length_counter.set_counter(data >> 3);
-                pulse.timer_reload = (pulse.timer_reload & 0xFF) | ((data & 0b111) as u16) << 8;
-                pulse.timer = pulse.timer_reload;
+                let new_timer_period =
+                    (pulse.timer.get_period() & 0xFF) | ((data & 0b111) as u16) << 8;
+                pulse.timer.set_period(new_timer_period);
                 self.frame_counter = 0;
                 pulse.duty_timer = 0;
 
                 pulse.envelope.reload();
 
-                let timer = pulse.timer_reload;
-                pulse.sweep.reset_target(timer);
+                pulse.sweep.reset_target(new_timer_period);
             }
             0x4008 => {
                 self.triangle.length_counter.halt = data & 0x80 > 0;
@@ -236,13 +195,15 @@ impl Addressable for APU {
                 self.triangle.linear_counter.reload(data & 0x7F);
             }
             0x400A => {
-                self.triangle.timer_reload = (self.triangle.timer_reload & 0xFF00) | data as u16;
-                self.triangle.timer = self.triangle.timer_reload;
+                self.triangle
+                    .timer
+                    .set_period((self.triangle.timer.get_period() & 0xFF00) | data as u16);
                 self.triangle.linear_counter.reload_current();
             }
             0x400B => {
-                self.triangle.timer_reload =
-                    (self.triangle.timer_reload & 0xFF) | ((data & 0b111) as u16) << 8;
+                self.triangle.timer.set_period(
+                    (self.triangle.timer.get_period() & 0xFF) | ((data & 0b111) as u16) << 8,
+                );
                 self.triangle.length_counter.set_counter(data >> 3);
                 self.triangle.linear_counter.reload_current();
             }

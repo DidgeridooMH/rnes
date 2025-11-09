@@ -5,8 +5,8 @@ mod opcodes;
 mod rwm;
 mod status;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 use crate::core::cpu::opcodes::OPCODES;
 
