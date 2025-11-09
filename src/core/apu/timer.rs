@@ -6,11 +6,11 @@ pub struct Timer {
 
 impl Timer {
     pub fn tick(&mut self) -> bool {
-        self.current -= 1;
         if self.current == 0 {
             self.current = self.reload;
             true
         } else {
+            self.current -= 1;
             false
         }
     }

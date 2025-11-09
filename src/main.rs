@@ -1,5 +1,3 @@
-use std::time::{Duration, Instant};
-
 use clap::Parser;
 use gilrs::{EventType, Gilrs};
 use rnes::{
@@ -39,10 +37,6 @@ async fn main() {
     let mut nes = Nes::new(&cli.rom, cli.show_ops, cli.show_header).unwrap();
 
     let mut gamepad = Gilrs::new().unwrap();
-
-    let mut last_frame = Instant::now();
-    let mut accumulator = Duration::ZERO;
-    let frame_time = Duration::from_nanos(16_666_667);
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -88,19 +82,11 @@ async fn main() {
                     }
                 }
 
-                // let now = Instant::now();
-                // let delta = now - last_frame;
-                // last_frame = now;
-                // accumulator += delta;
-
-                // while accumulator >= frame_time {
                 const CPU_CYCLES_PER_FRAME: usize = 29780;
                 if let Err(e) = nes.emulate(CPU_CYCLES_PER_FRAME, &mut screen, &window) {
                     eprintln!("{e}");
                     *control_flow = ControlFlow::Exit;
                 }
-                // accumulator -= frame_time;
-                // }
                 window.window.request_redraw();
             }
             _ => {}

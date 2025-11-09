@@ -16,21 +16,26 @@ impl Resampler {
 
     pub fn resample(&mut self, desired_samples: usize) -> Vec<f32> {
         let mut output = Vec::with_capacity(desired_samples);
+        let ratio = self.audio_buffer.len() as f32 / desired_samples as f32;
+
         for i in 0..desired_samples {
-            let source_start = i * self.audio_buffer.len() / desired_samples;
-            let source_end = (i + 1) * self.audio_buffer.len() / desired_samples;
-            if source_start == source_end {
-                output.push(self.audio_buffer[source_start]);
-            } else {
-                let sample = self.audio_buffer[source_start..source_end]
-                    .iter()
-                    .sum::<f32>()
-                    / (source_end - source_start) as f32;
-                output.push(sample);
-            }
+            let center = i as f32 * ratio;
+            let sample = self.linear_interpolate(center);
+            output.push(sample);
         }
         self.audio_buffer.clear();
 
         output
+    }
+
+    fn linear_interpolate(&self, position: f32) -> f32 {
+        let index = position.floor() as usize;
+
+        if index >= self.audio_buffer.len() - 1 {
+            return *self.audio_buffer.last().unwrap_or(&0.0);
+        }
+
+        self.audio_buffer[index] * (1.0 - position.fract())
+            + self.audio_buffer[index + 1] * position.fract()
     }
 }

@@ -27,7 +27,11 @@ impl Triangle {
     }
 
     pub fn get_sample(&self) -> f32 {
-        if self.enabled && !self.length_counter.mute() && !self.linear_counter.mute() {
+        if self.enabled
+            && !self.length_counter.mute()
+            && !self.linear_counter.mute()
+            && self.timer.get_period() > 1
+        {
             DUTY_TABLE[self.duty_timer] as f32 / 15.0
         } else {
             0.0

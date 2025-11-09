@@ -24,7 +24,6 @@ impl LinearCounter {
     }
 
     pub fn reload(&mut self, reload_value: u8) {
-        self.reload = true;
         self.reload_value = reload_value;
     }
 
