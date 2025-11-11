@@ -22,7 +22,7 @@ impl Default for AudioOutput {
 
         let desired_spec = AudioSpec {
             freq: Some(AUDIO_FREQUENCY as i32),
-            channels: Some(1),
+            channels: Some(2),
             format: Some(AudioFormat::f32_sys()),
         };
 

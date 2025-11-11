@@ -1,8 +1,9 @@
-use std::f32::consts::PI;
+use std::{collections::VecDeque, f32::consts::PI};
 
 #[derive(Default)]
 pub struct Resampler {
     audio_buffer: Vec<f32>,
+    delay_buffer: VecDeque<f32>,
 }
 
 impl Resampler {
@@ -22,6 +23,15 @@ impl Resampler {
             let center = i as f32 * ratio;
             let sample = self.lanczos_resample(center, ratio);
             output.push(sample);
+            self.delay_buffer.push_front(sample);
+
+            let other_sample = if self.delay_buffer.len() == 256 {
+                self.delay_buffer.pop_back().unwrap_or(0.0)
+            } else {
+                0.0
+            };
+
+            output.push(other_sample);
         }
         self.audio_buffer.clear();
 
