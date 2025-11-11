@@ -74,8 +74,8 @@ impl APU {
                 self.half_frame_flag = !self.half_frame_flag;
             }
 
-            let p0_sample = self.pulse[0].get_sample() * 0.0;
-            let p1_sample = self.pulse[1].get_sample() * 0.0;
+            let p0_sample = self.pulse[0].get_sample();
+            let p1_sample = self.pulse[1].get_sample();
             let pulse_sample = if p0_sample + p1_sample > 0.0 {
                 95.88 / ((8128.0 / (p0_sample + p1_sample)) + 100.0)
             } else {
@@ -83,7 +83,7 @@ impl APU {
             };
 
             let t_sample = self.triangle.get_sample();
-            let n_sample = self.noise.get_sample() * 0.0;
+            let n_sample = self.noise.get_sample();
             let tn_mix = (t_sample / 8227.0) + (n_sample / 12241.0);
             let tnd_sample = if tn_mix > 0.0 {
                 159.79 / ((1.0 / tn_mix) + 100.0)
