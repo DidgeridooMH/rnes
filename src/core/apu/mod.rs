@@ -11,9 +11,13 @@ mod noise;
 use noise::Noise;
 mod dmc;
 use dmc::Dmc;
+mod frame_counter;
 mod timer;
 
-use crate::{audio::AudioOutput, core::Addressable};
+use crate::{
+    audio::AudioOutput,
+    core::{apu::frame_counter::FrameCounter, Addressable},
+};
 
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
 
@@ -23,12 +27,9 @@ pub struct APU {
     noise: Noise,
     dmc: Dmc,
     cycle: usize,
-    frame_counter: u8,
-    sequencer_mode: bool,
     interrupt_inhibit: bool,
-    half_frame_flag: bool,
     audio_output: AudioOutput,
-    sequence_reset: bool,
+    frame_counter: FrameCounter,
 }
 
 impl Default for APU {
@@ -38,13 +39,10 @@ impl Default for APU {
             triangle: Triangle::default(),
             noise: Noise::new(),
             dmc: Dmc::default(),
-            frame_counter: 0,
             cycle: 0,
-            sequencer_mode: false,
             interrupt_inhibit: false,
-            half_frame_flag: false,
             audio_output: AudioOutput::new(),
-            sequence_reset: false,
+            frame_counter: FrameCounter::default(),
         }
     }
 }
@@ -63,19 +61,10 @@ impl APU {
 
             if self.cycle % FRAME_COUNTER_FREQ == 0 {
                 self.step_frame_counter();
-
-                if self.half_frame_flag {
-                    for pulse in &mut self.pulse {
-                        if let Some(new_timer) = pulse.sweep.step() {
-                            pulse.timer.set_period(new_timer);
-                        }
-                    }
-                }
-                self.half_frame_flag = !self.half_frame_flag;
             }
 
-            let p0_sample = self.pulse[0].get_sample();
-            let p1_sample = self.pulse[1].get_sample();
+            let p0_sample = self.pulse[0].get_sample() * 0.0;
+            let p1_sample = self.pulse[1].get_sample() * 0.0;
             let pulse_sample = if p0_sample + p1_sample > 0.0 {
                 95.88 / ((8128.0 / (p0_sample + p1_sample)) + 100.0)
             } else {
@@ -83,7 +72,7 @@ impl APU {
             };
 
             let t_sample = self.triangle.get_sample();
-            let n_sample = self.noise.get_sample();
+            let n_sample = self.noise.get_sample() * 0.0;
             let tn_mix = (t_sample / 8227.0) + (n_sample / 12241.0);
             let tnd_sample = if tn_mix > 0.0 {
                 159.79 / ((1.0 / tn_mix) + 100.0)
@@ -96,36 +85,27 @@ impl APU {
     }
 
     fn step_frame_counter(&mut self) {
-        if !self.sequencer_mode
-            || self.frame_counter != 3
-            || (self.sequence_reset && self.sequencer_mode)
-        {
+        if self.frame_counter.quarter_clock() {
+            self.triangle.linear_counter.step();
             self.pulse[0].envelope.step();
             self.pulse[1].envelope.step();
-            self.triangle.linear_counter.step();
             self.noise.envelope.step();
         }
 
-        if self.frame_counter == 1
-            || (self.sequencer_mode && self.frame_counter == 4)
-            || (!self.sequencer_mode && self.frame_counter == 3)
-            || (self.sequence_reset && self.sequencer_mode)
-        {
+        if self.frame_counter.half_clock() {
             self.pulse[0].length_counter.step();
+            if let Some(new_timer) = self.pulse[0].sweep.step() {
+                self.pulse[0].timer.set_period(new_timer);
+            }
             self.pulse[1].length_counter.step();
-
+            if let Some(new_timer) = self.pulse[1].sweep.step() {
+                self.pulse[1].timer.set_period(new_timer);
+            }
             self.triangle.length_counter.step();
-
             self.noise.length_counter.step();
         }
 
-        self.sequence_reset = false;
-
-        self.frame_counter = if self.sequencer_mode {
-            (self.frame_counter + 1) % 5
-        } else {
-            (self.frame_counter + 1) % 4
-        };
+        self.frame_counter.step();
     }
 }
 
@@ -193,16 +173,15 @@ impl Addressable for APU {
                 } else {
                     &mut self.pulse[1]
                 };
+
                 pulse.length_counter.set_counter(data >> 3);
                 let new_timer_period =
                     (pulse.timer.get_period() & 0xFF) | ((data & 0b111) as u16) << 8;
                 pulse.timer.set_period(new_timer_period);
-                self.frame_counter = 0;
+
                 pulse.duty_timer = 0;
 
                 pulse.envelope.reload();
-
-                pulse.sweep.reset_target(new_timer_period);
             }
             0x4008 => {
                 self.triangle.length_counter.halt = data & 0x80 > 0;
@@ -243,10 +222,8 @@ impl Addressable for APU {
                 self.noise.set_enabled(data & 8 > 0);
             }
             0x4017 => {
-                self.sequencer_mode = data & 0x80 > 0;
+                self.frame_counter.set_mode(data & 0x80 > 0);
                 self.interrupt_inhibit = data & 0x40 > 0;
-                self.frame_counter = 0;
-                self.sequence_reset = true;
             }
             _ => {}
         }
