@@ -1,13 +1,11 @@
 #[derive(Default)]
 pub struct Resampler {
     audio_buffer: Vec<f32>,
-    counter: usize,
 }
 
 impl Resampler {
     pub fn push(&mut self, sample: f32) {
         self.audio_buffer.push(sample);
-        self.counter += 1;
     }
 
     pub fn len(&self) -> usize {
