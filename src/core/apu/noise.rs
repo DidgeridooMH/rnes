@@ -4,7 +4,6 @@ const NOISE_PERIOD: [u16; 16] = [
     4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016, 2034, 4068,
 ];
 
-#[derive(Default)]
 pub struct Noise {
     pub envelope: Envelope,
     pub length_counter: LengthCounter,
@@ -19,14 +18,19 @@ fn shift(mut value: u16) -> u16 {
     value | feedback << 14
 }
 
-impl Noise {
-    pub fn new() -> Self {
+impl Default for Noise {
+    fn default() -> Self {
         Self {
+            envelope: Envelope::default(),
+            length_counter: LengthCounter::default(),
+            enabled: false,
+            timer: Timer::default(),
             shift: 1,
-            ..Default::default()
         }
     }
+}
 
+impl Noise {
     pub fn tick(&mut self) {
         if self.timer.tick() {
             self.shift = shift(self.shift);

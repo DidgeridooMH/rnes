@@ -21,6 +21,7 @@ use crate::{
 
 const FRAME_COUNTER_FREQ: usize = 1789773 / 240;
 
+#[derive(Default)]
 pub struct APU {
     pulse: [Pulse; 2],
     triangle: Triangle,
@@ -30,21 +31,6 @@ pub struct APU {
     interrupt_inhibit: bool,
     audio_output: AudioOutput,
     frame_counter: FrameCounter,
-}
-
-impl Default for APU {
-    fn default() -> Self {
-        Self {
-            pulse: [Pulse::new(0), Pulse::new(1)],
-            triangle: Triangle::default(),
-            noise: Noise::new(),
-            dmc: Dmc::default(),
-            cycle: 0,
-            interrupt_inhibit: false,
-            audio_output: AudioOutput::new(),
-            frame_counter: FrameCounter::default(),
-        }
-    }
 }
 
 impl APU {
@@ -63,8 +49,8 @@ impl APU {
                 self.step_frame_counter();
             }
 
-            let p0_sample = self.pulse[0].get_sample() * 0.0;
-            let p1_sample = self.pulse[1].get_sample() * 0.0;
+            let p0_sample = self.pulse[0].get_sample();
+            let p1_sample = self.pulse[1].get_sample();
             let pulse_sample = if p0_sample + p1_sample > 0.0 {
                 95.88 / ((8128.0 / (p0_sample + p1_sample)) + 100.0)
             } else {
@@ -72,7 +58,7 @@ impl APU {
             };
 
             let t_sample = self.triangle.get_sample();
-            let n_sample = self.noise.get_sample() * 0.0;
+            let n_sample = self.noise.get_sample();
             let tn_mix = (t_sample / 8227.0) + (n_sample / 12241.0);
             let tnd_sample = if tn_mix > 0.0 {
                 159.79 / ((1.0 / tn_mix) + 100.0)
@@ -94,13 +80,15 @@ impl APU {
 
         if self.frame_counter.half_clock() {
             self.pulse[0].length_counter.step();
-            if let Some(new_timer) = self.pulse[0].sweep.step() {
-                self.pulse[0].timer.set_period(new_timer);
-            }
+            self.pulse[0].timer.set_period(self.pulse[0].sweep.step(
+                self.pulse[0].timer.get_period(),
+                sweep::SweepType::OneComplement,
+            ));
             self.pulse[1].length_counter.step();
-            if let Some(new_timer) = self.pulse[1].sweep.step() {
-                self.pulse[1].timer.set_period(new_timer);
-            }
+            self.pulse[1].timer.set_period(self.pulse[1].sweep.step(
+                self.pulse[1].timer.get_period(),
+                sweep::SweepType::TwoComplement,
+            ));
             self.triangle.length_counter.step();
             self.noise.length_counter.step();
         }
@@ -153,8 +141,6 @@ impl Addressable for APU {
                     &mut self.pulse[1]
                 };
                 pulse.sweep.setup(SweepSetup(data));
-                let timer = pulse.timer.get_period();
-                pulse.sweep.reset_target(timer);
             }
             0x4002 | 0x4006 => {
                 let pulse = if address == 0x4002 {
@@ -163,9 +149,9 @@ impl Addressable for APU {
                     &mut self.pulse[1]
                 };
 
-                let new_timer_period = (pulse.timer.get_period() & 0xFF00) | data as u16;
-                pulse.timer.set_period(new_timer_period);
-                pulse.sweep.reset_target(new_timer_period);
+                pulse
+                    .timer
+                    .set_period((pulse.timer.get_period() & 0xFF00) | data as u16);
             }
             0x4003 | 0x4007 => {
                 let pulse = if address == 0x4003 {
@@ -175,9 +161,9 @@ impl Addressable for APU {
                 };
 
                 pulse.length_counter.set_counter(data >> 3);
-                let new_timer_period =
-                    (pulse.timer.get_period() & 0xFF) | ((data & 0b111) as u16) << 8;
-                pulse.timer.set_period(new_timer_period);
+                pulse
+                    .timer
+                    .set_period((pulse.timer.get_period() & 0xFF) | ((data & 0b111) as u16) << 8);
 
                 pulse.duty_timer = 0;
 

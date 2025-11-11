@@ -14,8 +14,8 @@ pub struct AudioOutput {
     resampler: Resampler,
 }
 
-impl AudioOutput {
-    pub fn new() -> Self {
+impl Default for AudioOutput {
+    fn default() -> Self {
         let sdl_context = sdl3::init().unwrap();
         let audio_subsystem = sdl_context.audio().unwrap();
 
@@ -34,7 +34,9 @@ impl AudioOutput {
             resampler: Resampler::default(),
         }
     }
+}
 
+impl AudioOutput {
     pub fn push_sample(&mut self, sample: f32) {
         self.resampler.push(sample);
 

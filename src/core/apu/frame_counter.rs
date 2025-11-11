@@ -7,6 +7,11 @@ pub struct FrameCounter {
 impl FrameCounter {
     pub fn step(&mut self) {
         self.counter += 1;
+        if self.extended_step {
+            self.counter %= 5;
+        } else {
+            self.counter %= 4;
+        }
     }
 
     pub fn set_mode(&mut self, extended_step: bool) {

@@ -1,3 +1,6 @@
+use std::cmp::max;
+
+use super::timer::Timer;
 use bitfield::bitfield;
 
 bitfield! {
@@ -15,73 +18,50 @@ bitfield! {
 
 #[derive(Default)]
 pub struct Sweep {
-    target: u16,
     shift: u16,
     negate: bool,
     enable: bool,
-    period: u8,
-    divider: u8,
-    reload: bool,
-    channel: u8,
+    divider: Timer,
+    muted: bool,
+}
+
+#[derive(PartialEq)]
+pub enum SweepType {
+    OneComplement,
+    TwoComplement,
 }
 
 impl Sweep {
-    pub fn new(channel: u8) -> Self {
-        Self {
-            channel,
-            ..Default::default()
-        }
-    }
-
     pub fn setup(&mut self, setup: SweepSetup) {
         self.enable = setup.enable();
-        self.period = setup.period();
-        self.divider = setup.period() + 1;
+        self.divider.set_period(setup.period() as u16);
+        self.divider.set_reload();
         self.negate = setup.negate();
         self.shift = setup.shift() as u16;
-        self.reload = true;
     }
 
-    pub fn step(&mut self) -> Option<u16> {
-        if self.divider == 0 {
-            self.divider = self.period;
-            self.reload = false;
+    pub fn step(&mut self, channel_period: u16, sweep_type: SweepType) -> u16 {
+        let mut sweep_amount = (channel_period >> self.shift) as i16;
 
-            if self.enable && !self.mute() && self.target < 0x7FF {
-                let target = self.target;
-                self.reset_target(target);
-                return Some(target);
+        let new_channel_period = if self.negate {
+            if sweep_type == SweepType::OneComplement {
+                sweep_amount -= 1;
             }
+            max(channel_period as i16 - sweep_amount, 0) as u16
         } else {
-            self.divider -= 1;
-        }
+            (channel_period as i16 + sweep_amount) as u16
+        };
 
-        if self.reload {
-            self.divider = self.period;
-            self.reload = false;
-        }
+        self.muted = channel_period < 8 || new_channel_period > 0x7FF;
 
-        None
-    }
-
-    pub fn reset_target(&mut self, current: u16) {
-        let change_amount = current >> self.shift;
-        if self.negate {
-            if change_amount < current {
-                if self.channel == 0 {
-                    self.target = current - change_amount - 1;
-                } else {
-                    self.target = current - change_amount;
-                }
-            } else {
-                self.target = 0;
-            }
+        if self.enable && self.divider.tick() && !self.muted {
+            new_channel_period
         } else {
-            self.target = current + change_amount;
+            channel_period
         }
     }
 
     pub fn mute(&self) -> bool {
-        self.target >= 0x7FF
+        self.muted
     }
 }

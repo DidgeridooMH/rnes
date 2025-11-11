@@ -21,13 +21,6 @@ pub struct Pulse {
 }
 
 impl Pulse {
-    pub fn new(channel: u8) -> Self {
-        Self {
-            sweep: Sweep::new(channel),
-            ..Default::default()
-        }
-    }
-
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
         self.length_counter.set_enabled(enabled);
@@ -40,11 +33,7 @@ impl Pulse {
     }
 
     pub fn get_sample(&self) -> f32 {
-        if self.enabled
-            && !self.length_counter.mute()
-            && self.timer.get_period() >= 8
-            && !self.sweep.mute()
-        {
+        if self.enabled && !self.length_counter.mute() && !self.sweep.mute() {
             let wave = DUTY_CYCLES[self.duty_cycle as usize][self.duty_timer] as f32;
             let decay = self.envelope.volume() as f32;
             wave * decay
