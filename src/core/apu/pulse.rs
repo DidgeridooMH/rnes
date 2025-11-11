@@ -46,7 +46,7 @@ impl Pulse {
             && !self.sweep.mute()
         {
             let wave = DUTY_CYCLES[self.duty_cycle as usize][self.duty_timer] as f32;
-            let decay = self.envelope.volume() as f32 / 15.0;
+            let decay = self.envelope.volume() as f32;
             wave * decay
         } else {
             0.0

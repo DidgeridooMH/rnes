@@ -32,7 +32,7 @@ impl Triangle {
             && !self.linear_counter.mute()
             && self.timer.get_period() > 1
         {
-            DUTY_TABLE[self.duty_timer] as f32 / 15.0
+            DUTY_TABLE[self.duty_timer] as f32
         } else {
             0.0
         }

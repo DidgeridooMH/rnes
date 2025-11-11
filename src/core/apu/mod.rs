@@ -83,8 +83,7 @@ impl APU {
             let tnd_sample =
                 159.79 / ((1.0 / ((t_sample / 8227.0) + (n_sample / 12241.0))) + 100.0);
 
-            self.audio_output
-                .push_sample((pulse_sample + tnd_sample) * 3.0);
+            self.audio_output.push_sample(pulse_sample + tnd_sample);
         }
     }
 

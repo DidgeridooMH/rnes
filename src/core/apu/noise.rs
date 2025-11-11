@@ -39,7 +39,7 @@ impl Noise {
             && self.timer.get_period() >= 8
             && self.shift & 1 == 0
         {
-            self.envelope.volume() as f32 / 15.0
+            self.envelope.volume() as f32
         } else {
             0.0
         }
