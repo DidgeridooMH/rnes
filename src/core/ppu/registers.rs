@@ -68,7 +68,7 @@ bitfield! {
 }
 
 impl Addressable for PPU {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         let address = address % 8 + 0x2000;
 
         self.open_bus = match address {
@@ -83,15 +83,12 @@ impl Addressable for PPU {
                 result
             }
             PPUDATA => {
-                let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0).unwrap();
+                let mut read_byte = self.vram_bus.borrow_mut().read_byte(self.v.0);
                 if self.v.0 < 0x3F00 {
                     std::mem::swap(&mut self.internal_data_buffer, &mut read_byte);
                 } else {
-                    self.internal_data_buffer = self
-                        .vram_bus
-                        .borrow_mut()
-                        .read_byte(self.v.0 - 0x1000)
-                        .unwrap();
+                    self.internal_data_buffer =
+                        self.vram_bus.borrow_mut().read_byte(self.v.0 - 0x1000);
                 }
                 self.v.0 = (self.v.0 + self.increment_size) & 0x3FFF;
                 read_byte
@@ -107,7 +104,7 @@ impl Addressable for PPU {
                 unimplemented!("Reading from VRAM at {address:X}");
             }
         };
-        self.open_bus
+        Some(self.open_bus)
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
@@ -181,10 +178,7 @@ impl Addressable for PPU {
                 }
             }
             PPUDATA => {
-                self.vram_bus
-                    .borrow_mut()
-                    .write_byte(self.v.0, data)
-                    .unwrap();
+                self.vram_bus.borrow_mut().write_byte(self.v.0, data);
                 self.v.0 = (self.v.0 + self.increment_size) & 0x3FFF;
             }
             _ => {

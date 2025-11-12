@@ -30,9 +30,9 @@ pub struct OamDmaRequest {
 }
 
 impl Addressable for OamDmaRequest {
-    fn read_byte(&mut self, _address: u16) -> u8 {
+    fn read_byte(&mut self, _address: u16) -> Option<u8> {
         // Open bus
-        0
+        None
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
@@ -101,8 +101,8 @@ impl CPU {
                 request.length -= 1;
                 address
             };
-            let oam_byte = bus.read_byte(oam_address).unwrap();
-            bus.write_byte(0x2004, oam_byte).unwrap();
+            let oam_byte = bus.read_byte(oam_address);
+            bus.write_byte(0x2004, oam_byte);
             return Ok(2);
         }
 
@@ -115,12 +115,12 @@ impl CPU {
                 Interrupt::Nmi => 0xFFFA,
                 Interrupt::Reset => 0xFFFC,
             };
-            self.pc = self.bus.borrow_mut().read_word(vector_address)?;
+            self.pc = self.bus.borrow_mut().read_word(vector_address);
             self.p.set_i(true);
             self.interrupt = None;
         }
 
-        let opcode = self.bus.borrow_mut().read_byte(self.pc)?;
+        let opcode = self.bus.borrow_mut().read_byte(self.pc);
         if self.show_ops {
             print!(
                 "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: {}",
@@ -159,10 +159,9 @@ impl CPU {
     fn get_address(&self, address_mode: AddressMode) -> Result<(u16, bool), CoreError> {
         match address_mode {
             AddressMode::Immediate => Ok((self.pc + 1, false)),
-            AddressMode::ZeroPage => Ok((
-                self.bus.borrow_mut().read_byte(self.pc + 1).unwrap() as u16,
-                false,
-            )),
+            AddressMode::ZeroPage => {
+                Ok((self.bus.borrow_mut().read_byte(self.pc + 1) as u16, false))
+            }
             AddressMode::ZeroPageX => Ok((
                 (self.get_address(AddressMode::ZeroPage)?.0 + self.x as u16) % 256,
                 false,
@@ -171,7 +170,7 @@ impl CPU {
                 (self.get_address(AddressMode::ZeroPage)?.0 + self.y as u16) % 256,
                 false,
             )),
-            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1)?, false)),
+            AddressMode::Absolute => Ok((self.bus.borrow_mut().read_word(self.pc + 1), false)),
             AddressMode::AbsoluteX => {
                 let address = self.get_address(AddressMode::Absolute)?.0;
                 Ok((
@@ -189,13 +188,13 @@ impl CPU {
             AddressMode::IndirectX => {
                 let zero_page_address = self.get_address(AddressMode::ZeroPageX)?.0;
                 Ok((
-                    self.bus.borrow_mut().read_word_bug(zero_page_address)?,
+                    self.bus.borrow_mut().read_word_bug(zero_page_address),
                     false,
                 ))
             }
             AddressMode::IndirectY => {
                 let zero_page_address = self.get_address(AddressMode::ZeroPage)?.0;
-                let address = self.bus.borrow_mut().read_word_bug(zero_page_address)?;
+                let address = self.bus.borrow_mut().read_word_bug(zero_page_address);
                 Ok((
                     address + self.y as u16,
                     address & 0xFF00 != (address + self.y as u16) & 0xFF00,
@@ -203,7 +202,7 @@ impl CPU {
             }
             AddressMode::Indirect => {
                 let address = self.get_address(AddressMode::Absolute)?.0;
-                Ok((self.bus.borrow_mut().read_word_bug(address)?, false))
+                Ok((self.bus.borrow_mut().read_word_bug(address), false))
             }
         }
     }
@@ -211,14 +210,14 @@ impl CPU {
     fn push_byte(&mut self, data: u8) -> Result<(), CoreError> {
         self.bus
             .borrow_mut()
-            .write_byte(0x100 + self.sp as u16, data)?;
+            .write_byte(0x100 + self.sp as u16, data);
         self.sp -= 1;
         Ok(())
     }
 
     fn pop_byte(&mut self) -> Result<u8, CoreError> {
         self.sp += 1;
-        self.bus.borrow_mut().read_byte(0x100 + self.sp as u16)
+        Ok(self.bus.borrow_mut().read_byte(0x100 + self.sp as u16))
     }
 
     fn push_word(&mut self, data: u16) -> Result<(), CoreError> {

@@ -58,14 +58,14 @@ impl Controller {
 }
 
 impl Addressable for Controller {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         if address == 0x4016 || address == 0x4017 {
             let output = self.buttons & 1;
             self.buttons >>= 1;
-            output
+            Some(output)
         } else {
             eprintln!("Unexpected read from controller address {address}");
-            0
+            None
         }
     }
 

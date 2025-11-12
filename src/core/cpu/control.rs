@@ -67,7 +67,7 @@ impl CPU {
     fn brk(&mut self) -> OpcodeResult {
         self.push_word(self.pc + 2)?;
         self.php()?;
-        self.pc = self.bus.borrow_mut().read_word(0xFFFEu16)?;
+        self.pc = self.bus.borrow_mut().read_word(0xFFFEu16);
         self.p.set_i(true);
 
         Ok((0, 7))
@@ -115,7 +115,7 @@ impl CPU {
 
         if should_branch {
             // PC is incremented after memory fetch.
-            let offset = self.bus.borrow_mut().read_byte(self.pc + 1)? as u16;
+            let offset = self.bus.borrow_mut().read_byte(self.pc + 1) as u16;
             self.pc += 2;
             let prev_pc = self.pc;
             self.pc = if offset & 0x80 > 0 {
@@ -137,14 +137,14 @@ impl CPU {
     fn jsr(&mut self) -> OpcodeResult {
         // PC + 3'size of ins' - 1'RTS has size 1'
         self.push_word(self.pc + 2)?;
-        self.pc = self.bus.borrow_mut().read_word(self.pc + 1)?;
+        self.pc = self.bus.borrow_mut().read_word(self.pc + 1);
         Ok((0, 6))
     }
 
     fn bit(&mut self, opcode: u8) -> OpcodeResult {
         let addr_mode = AddressMode::from_code(opcode)?;
         let (address, _) = self.get_address(addr_mode)?;
-        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address);
         let result = self.a & operand;
 
         self.p.set_z(result == 0);
@@ -184,7 +184,7 @@ impl CPU {
         let addr_mode = AddressMode::from_code(opcode)?;
         let (address, _) = self.get_address(addr_mode)?;
 
-        self.bus.borrow_mut().write_byte(address, self.y)?;
+        self.bus.borrow_mut().write_byte(address, self.y);
 
         Ok((addr_mode.byte_code_size() + 1, addr_mode.cycle_cost() + 1))
     }
@@ -214,7 +214,7 @@ impl CPU {
         };
         let (address, page_cross) = self.get_address(addr_mode)?;
 
-        self.y = self.bus.borrow_mut().read_byte(address)?;
+        self.y = self.bus.borrow_mut().read_byte(address);
         self.set_nz_flags(self.y);
 
         let mut cycles = addr_mode.cycle_cost() + 1;
@@ -231,7 +231,7 @@ impl CPU {
         };
         let (address, page_cross) = self.get_address(addr_mode)?;
 
-        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address);
         let result = self.y.wrapping_sub(operand);
         self.p.set_c(self.y >= operand);
         self.set_nz_flags(result);
@@ -250,7 +250,7 @@ impl CPU {
         };
         let (address, page_cross) = self.get_address(addr_mode)?;
 
-        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address);
         let result = self.x.wrapping_sub(operand);
         self.p.set_c(self.x >= operand);
         self.set_nz_flags(result);

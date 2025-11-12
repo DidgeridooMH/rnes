@@ -69,12 +69,8 @@ impl PPU {
                     self.sprite_table
                 };
                 self.secondary_shifters[i] = SpriteShift {
-                    pattern_low: vram_bus
-                        .read_byte(sprite_table + tile_index * 16 + (y % 8))
-                        .unwrap(),
-                    pattern_high: vram_bus
-                        .read_byte(sprite_table + tile_index * 16 + (y % 8) + 8)
-                        .unwrap(),
+                    pattern_low: vram_bus.read_byte(sprite_table + tile_index * 16 + (y % 8)),
+                    pattern_high: vram_bus.read_byte(sprite_table + tile_index * 16 + (y % 8) + 8),
                     attribute: entry.attributes,
                 }
             }

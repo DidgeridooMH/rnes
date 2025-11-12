@@ -79,38 +79,41 @@ impl Mmc1 {
 }
 
 impl Addressable for Mmc1 {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         match address {
-            0..=0xFFF => self.chr_banks[self.chr_bank0_switch as usize][address as usize],
+            0..=0xFFF => Some(self.chr_banks[self.chr_bank0_switch as usize][address as usize]),
             0x1000..=0x1FFF => {
                 if self.control.chr_mode() {
-                    self.chr_banks[self.chr_bank1_switch as usize][address as usize - 0x1000]
+                    Some(self.chr_banks[self.chr_bank1_switch as usize][address as usize - 0x1000])
                 } else {
-                    self.chr_banks[self.chr_bank0_switch as usize + 1][address as usize - 0x1000]
+                    Some(
+                        self.chr_banks[self.chr_bank0_switch as usize + 1]
+                            [address as usize - 0x1000],
+                    )
                 }
             }
-            0x6000..=0x7FFF => self.prg_ram[address as usize - 0x6000],
+            0x6000..=0x7FFF => Some(self.prg_ram[address as usize - 0x6000]),
             0x8000..=0xBFFF => match self.control.prg_mode() {
-                0 | 1 => {
+                0 | 1 => Some(
                     self.prg_banks[(self.prg_bank_switch & 0xFE) as usize]
-                        [address as usize - 0x8000]
-                }
-                2 => self.prg_banks[0][address as usize - 0x8000],
-                3 => self.prg_banks[self.prg_bank_switch as usize][address as usize - 0x8000],
+                        [address as usize - 0x8000],
+                ),
+                2 => Some(self.prg_banks[0][address as usize - 0x8000]),
+                3 => Some(self.prg_banks[self.prg_bank_switch as usize][address as usize - 0x8000]),
                 _ => unreachable!(),
             },
             0xC000..=0xFFFF => match self.control.prg_mode() {
-                0 | 1 => {
+                0 | 1 => Some(
                     self.prg_banks[(self.prg_bank_switch & 0xFE) as usize + 1]
-                        [address as usize - 0xC000]
-                }
-                2 => self.prg_banks[self.prg_bank_switch as usize][address as usize - 0xC000],
-                3 => self.prg_banks[self.prg_banks.len() - 1][address as usize - 0xC000],
+                        [address as usize - 0xC000],
+                ),
+                2 => Some(self.prg_banks[self.prg_bank_switch as usize][address as usize - 0xC000]),
+                3 => Some(self.prg_banks[self.prg_banks.len() - 1][address as usize - 0xC000]),
                 _ => unreachable!(),
             },
             _ => {
                 println!("(warn) Unexpected read in MMC1 {address:X}");
-                0
+                None
             }
         }
     }

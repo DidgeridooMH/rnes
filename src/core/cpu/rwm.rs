@@ -40,9 +40,9 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let operand = self.bus.borrow_mut().read_byte(address)?;
+            let operand = self.bus.borrow_mut().read_byte(address);
             self.p.set_c(operand & 0x80 > 0);
-            self.bus.borrow_mut().write_byte(address, operand << 1)?;
+            self.bus.borrow_mut().write_byte(address, operand << 1);
             self.set_nz_flags(operand << 1);
 
             let mut cycle = address_mode.cycle_cost() + 3;
@@ -65,11 +65,11 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let mut operand = self.bus.borrow_mut().read_byte(address)?;
+            let mut operand = self.bus.borrow_mut().read_byte(address);
             self.p.set_c(operand & 0x80 > 0);
             operand <<= 1;
             operand |= carry;
-            self.bus.borrow_mut().write_byte(address, operand)?;
+            self.bus.borrow_mut().write_byte(address, operand);
             self.set_nz_flags(operand);
 
             let mut cycle = address_mode.cycle_cost() + 3;
@@ -90,9 +90,9 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let operand = self.bus.borrow_mut().read_byte(address)?;
+            let operand = self.bus.borrow_mut().read_byte(address);
             self.p.set_c(operand & 1 > 0);
-            self.bus.borrow_mut().write_byte(address, operand >> 1)?;
+            self.bus.borrow_mut().write_byte(address, operand >> 1);
             self.set_nz_flags(operand >> 1);
 
             let mut cycle = address_mode.cycle_cost() + 3;
@@ -115,11 +115,11 @@ impl CPU {
             Ok((1, 2))
         } else {
             let address = self.get_address(address_mode)?.0;
-            let mut operand = self.bus.borrow_mut().read_byte(address)?;
+            let mut operand = self.bus.borrow_mut().read_byte(address);
             self.p.set_c(operand & 1 > 0);
             operand >>= 1;
             operand |= carry * 0x80;
-            self.bus.borrow_mut().write_byte(address, operand)?;
+            self.bus.borrow_mut().write_byte(address, operand);
             self.set_nz_flags(operand);
 
             let mut cycle = address_mode.cycle_cost() + 3;
@@ -138,7 +138,7 @@ impl CPU {
         }
 
         let address = self.get_address(address_mode)?.0;
-        self.bus.borrow_mut().write_byte(address, self.x)?;
+        self.bus.borrow_mut().write_byte(address, self.x);
 
         Ok((
             address_mode.byte_code_size() + 1,
@@ -167,7 +167,7 @@ impl CPU {
         };
 
         let (address, page_cross) = self.get_address(address_mode)?;
-        self.x = self.bus.borrow_mut().read_byte(address)?;
+        self.x = self.bus.borrow_mut().read_byte(address);
         self.set_nz_flags(self.x);
 
         if self.show_ops {
@@ -199,11 +199,11 @@ impl CPU {
     fn dec(&mut self, opcode: u8) -> OpcodeResult {
         let address_mode = AddressMode::from_code(opcode)?;
         let address = self.get_address(address_mode)?.0;
-        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address);
 
         self.bus
             .borrow_mut()
-            .write_byte(address, operand.wrapping_sub(1))?;
+            .write_byte(address, operand.wrapping_sub(1));
 
         self.set_nz_flags(operand.wrapping_sub(1));
 
@@ -224,11 +224,11 @@ impl CPU {
     fn inc(&mut self, opcode: u8) -> OpcodeResult {
         let address_mode = AddressMode::from_code(opcode)?;
         let address = self.get_address(address_mode)?.0;
-        let operand = self.bus.borrow_mut().read_byte(address)?;
+        let operand = self.bus.borrow_mut().read_byte(address);
 
         self.bus
             .borrow_mut()
-            .write_byte(address, operand.wrapping_add(1))?;
+            .write_byte(address, operand.wrapping_add(1));
 
         self.set_nz_flags(operand.wrapping_add(1));
 

@@ -94,7 +94,7 @@ impl APU {
 }
 
 impl Addressable for APU {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         if address == 0x4015 {
             let mut status = 0u8;
             if !self.pulse[0].length_counter.mute() {
@@ -109,9 +109,9 @@ impl Addressable for APU {
             if !self.noise.length_counter.mute() {
                 status |= 8;
             }
-            return status;
+            return Some(status);
         }
-        0
+        None
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {

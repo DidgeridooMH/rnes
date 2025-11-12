@@ -19,8 +19,8 @@ impl InternalRam {
 }
 
 impl Addressable for InternalRam {
-    fn read_byte(&mut self, address: u16) -> u8 {
-        self.data[(address % CPU_INTERNAL_RAM_SIZE as u16) as usize]
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
+        Some(self.data[(address % CPU_INTERNAL_RAM_SIZE as u16) as usize])
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {

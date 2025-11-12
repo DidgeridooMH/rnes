@@ -182,45 +182,32 @@ impl PPU {
                         self.name_table_selector = self
                             .vram_bus
                             .borrow_mut()
-                            .read_byte((self.v.0 & 0xFFF) | NAMETABLE_BASE_ADDR)
-                            .unwrap();
+                            .read_byte((self.v.0 & 0xFFF) | NAMETABLE_BASE_ADDR);
                     }
                     3 => {
                         let x = self.v.coarse_x() / 4;
                         let y = self.v.coarse_y() / 4;
                         let nametable = self.v.nametable_select();
                         let attribute_address = 0x23C0 | (nametable * 0x400) | (y << 3) | x;
-                        self.attribute = self
-                            .vram_bus
-                            .borrow_mut()
-                            .read_byte(attribute_address)
-                            .unwrap();
+                        self.attribute = self.vram_bus.borrow_mut().read_byte(attribute_address);
                         self.attribute >>=
                             (self.v.coarse_x() & 0b10) | ((self.v.coarse_y() & 0b10) << 1);
                         self.attribute &= 0b11;
                     }
                     5 => {
-                        self.pattern_low = self
-                            .vram_bus
-                            .borrow_mut()
-                            .read_byte(
-                                self.background_table
-                                    + self.name_table_selector as u16 * 16
-                                    + self.v.fine_y(),
-                            )
-                            .unwrap();
+                        self.pattern_low = self.vram_bus.borrow_mut().read_byte(
+                            self.background_table
+                                + self.name_table_selector as u16 * 16
+                                + self.v.fine_y(),
+                        );
                     }
                     7 => {
-                        self.pattern_high = self
-                            .vram_bus
-                            .borrow_mut()
-                            .read_byte(
-                                self.background_table
-                                    + self.name_table_selector as u16 * 16
-                                    + self.v.fine_y()
-                                    + 8,
-                            )
-                            .unwrap();
+                        self.pattern_high = self.vram_bus.borrow_mut().read_byte(
+                            self.background_table
+                                + self.name_table_selector as u16 * 16
+                                + self.v.fine_y()
+                                + 8,
+                        );
                     }
                     _ => {}
                 }
@@ -237,8 +224,7 @@ impl PPU {
                 let mut background_color = self
                     .vram_bus
                     .borrow_mut()
-                    .read_byte(0x3F00 + color_index as u16)
-                    .unwrap();
+                    .read_byte(0x3F00 + color_index as u16);
 
                 let (sprite_color, sprite_index, behind_background) = match self.mask.show_sprite()
                 {
@@ -254,8 +240,7 @@ impl PPU {
                         background_color = self
                             .vram_bus
                             .borrow_mut()
-                            .read_byte(0x3F10 + sprite_color as u16)
-                            .unwrap();
+                            .read_byte(0x3F10 + sprite_color as u16);
                     }
                 }
 

@@ -50,8 +50,8 @@ impl Nrom {
 }
 
 impl Addressable for NromChr {
-    fn read_byte(&mut self, address: u16) -> u8 {
-        self.chr_rom[address as usize]
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
+        Some(self.chr_rom[address as usize])
     }
 
     fn write_byte(&mut self, address: u16, data: u8) {
@@ -60,20 +60,20 @@ impl Addressable for NromChr {
 }
 
 impl Addressable for Nrom {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         match address {
-            0x6000..=0x7FFF => self.prg_ram[(address as usize - 0x6000) % PRG_RAM_SIZE],
-            0x8000..=0xBFFF => self.prg_rom[address as usize - 0x8000],
+            0x6000..=0x7FFF => Some(self.prg_ram[(address as usize - 0x6000) % PRG_RAM_SIZE]),
+            0x8000..=0xBFFF => Some(self.prg_rom[address as usize - 0x8000]),
             0xC000..=0xFFFF => {
                 if self.rom_banks > 1 {
-                    self.prg_rom[address as usize - 0x8000]
+                    Some(self.prg_rom[address as usize - 0x8000])
                 } else {
                     self.read_byte(address - PRG_ROM_SIZE as u16)
                 }
             }
             _ => {
                 eprintln!("(warn) NROM read address 0x{address:X} that was unexpected.");
-                0
+                None
             }
         }
     }

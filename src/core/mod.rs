@@ -47,7 +47,7 @@ struct RwAddressable {
 }
 
 impl Addressable for RwAddressable {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         self.read.borrow_mut().read_byte(address)
     }
 

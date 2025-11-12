@@ -38,7 +38,7 @@ impl CPU {
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
         let mut operand = 0;
         if opcode_group != OpcodeGroup::Sta {
-            operand = self.bus.borrow_mut().read_byte(address)?;
+            operand = self.bus.borrow_mut().read_byte(address);
         }
 
         if self.show_ops {
@@ -54,7 +54,7 @@ impl CPU {
             OpcodeGroup::And => self.and(operand),
             OpcodeGroup::Eor => self.eor(operand),
             OpcodeGroup::Adc => self.adc(operand),
-            OpcodeGroup::Sta => self.bus.borrow_mut().write_byte(address, self.a)?,
+            OpcodeGroup::Sta => self.bus.borrow_mut().write_byte(address, self.a),
             OpcodeGroup::Lda => self.lda(operand),
             OpcodeGroup::Cmp => self.cmp(operand),
             OpcodeGroup::Sbc => self.sbc(operand),

@@ -25,36 +25,36 @@ impl VRam {
 }
 
 impl Addressable for VRam {
-    fn read_byte(&mut self, address: u16) -> u8 {
+    fn read_byte(&mut self, address: u16) -> Option<u8> {
         match address {
             0x2000..=0x2FFF => {
                 let address = address as usize;
                 match self.mirroring {
                     MirrorArrangement::Vertical => match address {
-                        0x2000..=0x23FF => self.nametable0[address - 0x2000],
-                        0x2400..=0x27FF => self.nametable1[address - 0x2400],
-                        0x2800..=0x2BFF => self.nametable0[address - 0x2800],
-                        0x2C00..=0x2FFF => self.nametable1[address - 0x2C00],
+                        0x2000..=0x23FF => Some(self.nametable0[address - 0x2000]),
+                        0x2400..=0x27FF => Some(self.nametable1[address - 0x2400]),
+                        0x2800..=0x2BFF => Some(self.nametable0[address - 0x2800]),
+                        0x2C00..=0x2FFF => Some(self.nametable1[address - 0x2C00]),
                         _ => unreachable!(),
                     },
                     MirrorArrangement::Horizontal => match address {
-                        0x2000..=0x27FF => self.nametable0[address % 0x400],
-                        0x2800..=0x2FFF => self.nametable1[address % 0x400],
+                        0x2000..=0x27FF => Some(self.nametable0[address % 0x400]),
+                        0x2800..=0x2FFF => Some(self.nametable1[address % 0x400]),
                         _ => unreachable!(),
                     },
-                    MirrorArrangement::OneScreenLower => self.nametable0[address % 0x400],
-                    MirrorArrangement::OneScreenUpper => self.nametable1[address % 0x400],
+                    MirrorArrangement::OneScreenLower => Some(self.nametable0[address % 0x400]),
+                    MirrorArrangement::OneScreenUpper => Some(self.nametable1[address % 0x400]),
                 }
             }
             0x3000..=0x3EFF => self.read_byte(address - 0x1000),
             0x3F00..=0x3FFF => match address {
                 0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => self.read_byte(address - 0x10),
-                0x3F04 | 0x3F08 | 0x3F0C => self.palette[address as usize % 4],
-                _ => self.palette[(address as usize - 0x3F00) % 0x20],
+                0x3F04 | 0x3F08 | 0x3F0C => Some(self.palette[address as usize % 4]),
+                _ => Some(self.palette[(address as usize - 0x3F00) % 0x20]),
             },
             _ => {
                 eprintln!("Unexpected VRAM read at {address:X}");
-                0
+                None
             }
         }
     }
