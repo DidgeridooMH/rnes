@@ -4,6 +4,7 @@ mod memory;
 mod opcodes;
 mod rwm;
 mod status;
+mod unofficial;
 
 // #[cfg(test)]
 // mod tests;
@@ -20,12 +21,15 @@ enum Interrupt {
     Nmi,
 }
 
+const OAM_DMA_SIZE: usize = 256;
+
 #[derive(Copy, Clone, Default)]
-pub struct CPUOam {
-    address: Option<u16>,
+pub struct OamDmaRequest {
+    address: u16,
+    length: usize,
 }
 
-impl Addressable for CPUOam {
+impl Addressable for OamDmaRequest {
     fn read_byte(&mut self, _address: u16) -> u8 {
         // Open bus
         0
@@ -33,7 +37,8 @@ impl Addressable for CPUOam {
 
     fn write_byte(&mut self, address: u16, data: u8) {
         if address == 0x4014 {
-            self.address = Some((data as u16) << 8);
+            self.address = (data as u16) << 8;
+            self.length = OAM_DMA_SIZE
         } else {
             println!("(warn) Unexpected write to {address:X} in OAM CPU register");
         }
@@ -50,7 +55,7 @@ pub struct CPU {
     pub p: StatusRegister,
     interrupt: Option<Interrupt>,
     show_ops: bool,
-    oam_signal: Rc<RefCell<CPUOam>>,
+    oam_request: Rc<RefCell<OamDmaRequest>>,
     cycles: usize,
 }
 
@@ -58,9 +63,9 @@ impl CPU {
     pub fn new(bus: &Rc<RefCell<Bus>>) -> Self {
         bus.borrow_mut()
             .register_region(0x0u16..=0x1FFFu16, InternalRam::new());
-        let oam = Rc::new(RefCell::new(CPUOam::default()));
+        let oam_request = Rc::new(RefCell::new(OamDmaRequest::default()));
         bus.borrow_mut()
-            .register_region(0x4014u16..=0x4014u16, oam.clone());
+            .register_region(0x4014u16..=0x4014u16, oam_request.clone());
 
         Self {
             bus: bus.clone(),
@@ -72,7 +77,7 @@ impl CPU {
             p: StatusRegister(0),
             interrupt: Some(Interrupt::Reset),
             show_ops: false,
-            oam_signal: oam,
+            oam_request,
             cycles: 0,
         }
     }
@@ -86,16 +91,19 @@ impl CPU {
     }
 
     pub fn tick(&mut self) -> Result<usize, CoreError> {
-        let oam_signal = self.oam_signal.borrow().address;
-        if let Some(oam_address) = oam_signal {
+        let oam_request_length = self.oam_request.borrow().length;
+        if oam_request_length > 0 {
             let mut bus = self.bus.borrow_mut();
-            for i in 0..256 {
-                let oam_byte = bus.read_byte(oam_address + i).unwrap();
-                bus.write_byte(0x2004, oam_byte).unwrap();
-            }
-            self.oam_signal.borrow_mut().address = None;
-            self.cycles += 514;
-            return Ok(514);
+            let oam_address = {
+                let mut request = self.oam_request.borrow_mut();
+                let address = request.address;
+                request.address += 1;
+                request.length -= 1;
+                address
+            };
+            let oam_byte = bus.read_byte(oam_address).unwrap();
+            bus.write_byte(0x2004, oam_byte).unwrap();
+            return Ok(2);
         }
 
         if let Some(interrupt) = self.interrupt {
@@ -130,7 +138,7 @@ impl CPU {
             0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode)?,
             2 => self.run_rwm_op(opcode)?,
-            3 => return Err(CoreError::OpcodeNotImplemented(opcode)),
+            3 => self.run_unofficial_op(opcode)?,
             _ => unreachable!(),
         };
 
