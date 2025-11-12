@@ -1,4 +1,4 @@
-use super::{AddressMode, CoreError, CPU};
+use super::{AddressMode, CPU};
 
 #[cfg(test)]
 mod tests;
@@ -32,9 +32,9 @@ impl OpcodeGroup {
 }
 
 impl CPU {
-    pub fn run_alu_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
-        let address_mode = AddressMode::from_code(opcode)?;
-        let (address, mut page_cross) = self.get_address(address_mode)?;
+    pub fn run_alu_op(&mut self, opcode: u8) -> usize {
+        let address_mode = AddressMode::from_code(opcode);
+        let (address, mut page_cross) = self.get_address(address_mode);
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
         let mut operand = 0;
         if opcode_group != OpcodeGroup::Sta {
@@ -54,7 +54,13 @@ impl CPU {
             OpcodeGroup::And => self.and(operand),
             OpcodeGroup::Eor => self.eor(operand),
             OpcodeGroup::Adc => self.adc(operand),
-            OpcodeGroup::Sta => self.bus.borrow_mut().write_byte(address, self.a),
+            OpcodeGroup::Sta => {
+                if opcode == 0x89 {
+                    self.nop(address_mode);
+                } else {
+                    self.bus.borrow_mut().write_byte(address, self.a);
+                }
+            }
             OpcodeGroup::Lda => self.lda(operand),
             OpcodeGroup::Cmp => self.cmp(operand),
             OpcodeGroup::Sbc => self.sbc(operand),
@@ -76,25 +82,26 @@ impl CPU {
         }
 
         self.pc += 1 + address_mode.byte_code_size();
-        Ok(cycles)
+
+        cycles
     }
 
-    fn ora(&mut self, operand: u8) {
+    pub(super) fn ora(&mut self, operand: u8) {
         self.a |= operand;
         self.set_nz_flags(self.a);
     }
 
-    fn and(&mut self, operand: u8) {
+    pub(super) fn and(&mut self, operand: u8) {
         self.a &= operand;
         self.set_nz_flags(self.a);
     }
 
-    fn eor(&mut self, operand: u8) {
+    pub(super) fn eor(&mut self, operand: u8) {
         self.a ^= operand;
         self.set_nz_flags(self.a);
     }
 
-    fn adc(&mut self, operand: u8) {
+    pub(super) fn adc(&mut self, operand: u8) {
         let carry = self.p.c() as u8;
         let (sum1, overflow1) = self.a.overflowing_add(operand);
         let (sum2, overflow2) = sum1.overflowing_add(carry);
@@ -108,18 +115,18 @@ impl CPU {
         self.set_nz_flags(self.a);
     }
 
-    fn lda(&mut self, operand: u8) {
+    pub(super) fn lda(&mut self, operand: u8) {
         self.a = operand;
         self.set_nz_flags(self.a);
     }
 
-    fn cmp(&mut self, operand: u8) {
+    pub(super) fn cmp(&mut self, operand: u8) {
         let result = self.a.wrapping_sub(operand);
         self.p.set_c(self.a >= operand);
         self.set_nz_flags(result);
     }
 
-    fn sbc(&mut self, operand: u8) {
+    pub(super) fn sbc(&mut self, operand: u8) {
         let carry = self.p.c() as u8;
         let (diff1, overflow1) = self.a.overflowing_sub(operand);
         let (diff2, overflow2) = diff1.overflowing_sub(1 - carry);
