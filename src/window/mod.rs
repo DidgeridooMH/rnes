@@ -100,8 +100,8 @@ impl MainWindow {
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Aspect Ratio Buffer"),
             contents: bytemuck::cast_slice(&[WindowUniform::new(
-                window.inner_size().width as f32 / window.inner_size().height as f32,
                 NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+                window.inner_size().width as f32 / window.inner_size().height as f32,
             )]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
@@ -344,8 +344,8 @@ impl MainWindow {
                 &self.uniform_buffer,
                 0,
                 bytemuck::cast_slice(&[WindowUniform::new(
-                    self.window.inner_size().width as f32 / self.window.inner_size().height as f32,
                     NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+                    self.window.inner_size().width as f32 / self.window.inner_size().height as f32,
                 )]),
             )
         }
