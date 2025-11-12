@@ -289,7 +289,7 @@ impl PPU {
     }
 
     fn update_address(&mut self) {
-        if self.cycle % 8 == 0
+        if self.cycle.is_multiple_of(8)
             && ((1..=255).contains(&self.cycle) || self.cycle == 328 || self.cycle == 336)
         {
             self.increment_x();

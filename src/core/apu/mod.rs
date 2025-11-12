@@ -9,8 +9,6 @@ use triangle::Triangle;
 mod linear_counter;
 mod noise;
 use noise::Noise;
-mod dmc;
-use dmc::Dmc;
 mod frame_counter;
 mod timer;
 
@@ -26,7 +24,6 @@ pub struct APU {
     pulse: [Pulse; 2],
     triangle: Triangle,
     noise: Noise,
-    dmc: Dmc,
     cycle: usize,
     interrupt_inhibit: bool,
     audio_output: AudioOutput,
@@ -37,15 +34,14 @@ impl APU {
     pub fn tick(&mut self, cycles: usize) {
         for _ in 0..cycles {
             self.cycle += 1;
-            if self.cycle % 2 == 0 {
+            if self.cycle.is_multiple_of(2) {
                 self.pulse[0].tick();
                 self.pulse[1].tick();
                 self.noise.tick();
-                self.dmc.tick();
             }
             self.triangle.tick();
 
-            if self.cycle % FRAME_COUNTER_FREQ == 0 {
+            if self.cycle.is_multiple_of(FRAME_COUNTER_FREQ) {
                 self.step_frame_counter();
             }
 

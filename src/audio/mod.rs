@@ -55,7 +55,7 @@ impl AudioOutput {
 
     fn flush_audio(&mut self) {
         let desired_samples = self.resampler.len() / TARGET_SAMPLE_SIZE;
-        let resampled_audio = self.resampler.resample(desired_samples as usize);
+        let resampled_audio = self.resampler.resample(desired_samples);
         self.sound_sampler.put_data_f32(&resampled_audio).unwrap();
     }
 }

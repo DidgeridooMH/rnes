@@ -65,10 +65,7 @@ pub fn load_rom(
     show_header: bool,
     vram: &Rc<RefCell<VRam>>,
 ) -> Result<(), String> {
-    let header = match RomHeader::from_slice(&rom[0..16]) {
-        Ok(h) => h,
-        Err(e) => return Err(e),
-    };
+    let header = RomHeader::from_slice(&rom[0..16])?;
 
     vram.borrow_mut().set_mirroring(header.mirroring);
 

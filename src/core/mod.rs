@@ -60,7 +60,6 @@ pub struct Nes {
     cpu: CPU,
     apu: Rc<RefCell<APU>>,
     ppu: Rc<RefCell<PPU>>,
-    cycle_count: usize,
     frame_count_start: Instant,
     pub controller: Rc<RefCell<Controller>>,
 }
@@ -115,7 +114,6 @@ impl Nes {
             apu,
             ppu,
             controller,
-            cycle_count: 0,
             frame_count_start: Instant::now(),
         })
     }
@@ -138,7 +136,6 @@ impl Nes {
         while used_cycles < cycles {
             match self.cpu.tick() {
                 Ok(cycle_count) => {
-                    self.cycle_count += cycle_count;
                     used_cycles += cycle_count;
                     let mut ppu = self.ppu.borrow_mut();
                     for _ in 0..(cycle_count * 3) {

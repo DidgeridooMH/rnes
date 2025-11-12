@@ -8,18 +8,14 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+mod uniform;
 mod vertex;
+
+use uniform::WindowUniform;
 
 pub const NATIVE_RESOLUTION: PhysicalSize<u32> = PhysicalSize::new(256, 240);
 pub const BYTES_PER_PIXEL: usize = 4;
 const SCALING_FACTOR: u32 = 3;
-
-#[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct WindowUniform {
-    region_aspect: f32,
-    window_aspect: f32,
-}
 
 pub struct MainWindow {
     pub window: Window,
@@ -103,10 +99,10 @@ impl MainWindow {
 
         let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Aspect Ratio Buffer"),
-            contents: bytemuck::cast_slice(&[WindowUniform {
-                window_aspect: window.inner_size().width as f32 / window.inner_size().height as f32,
-                region_aspect: NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
-            }]),
+            contents: bytemuck::cast_slice(&[WindowUniform::new(
+                window.inner_size().width as f32 / window.inner_size().height as f32,
+                NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+            )]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -347,11 +343,10 @@ impl MainWindow {
             self.queue.write_buffer(
                 &self.uniform_buffer,
                 0,
-                bytemuck::cast_slice(&[WindowUniform {
-                    window_aspect: self.window.inner_size().width as f32
-                        / self.window.inner_size().height as f32,
-                    region_aspect: NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
-                }]),
+                bytemuck::cast_slice(&[WindowUniform::new(
+                    self.window.inner_size().width as f32 / self.window.inner_size().height as f32,
+                    NATIVE_RESOLUTION.width as f32 / NATIVE_RESOLUTION.height as f32,
+                )]),
             )
         }
     }
