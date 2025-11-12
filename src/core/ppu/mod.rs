@@ -132,10 +132,15 @@ impl PPU {
     pub fn reset_frame_count(&mut self) {
         self.frame_count = 0;
     }
+
     pub fn tick(&mut self, screen: &mut [u32]) -> bool {
         let mut generate_nmi = false;
 
-        if self.odd_frame && self.mask.show_background() && self.cycle == 0 && self.scanline == 0 {
+        if self.odd_frame
+            && (self.mask.show_background() || self.mask.show_sprite())
+            && self.cycle == 0
+            && self.scanline == 0
+        {
             self.cycle = 1;
         }
 
