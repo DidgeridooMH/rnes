@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bitfield = "0.13.2"
-bytemuck = { version = "1.13.1", features = ["derive"] }
-clap = { version = "4.3.0", features = ["derive"] }
-gilrs = "0.10.2"
 sdl3 = { version = "0.16.1", features = ["use-vcpkg"] }
 tokio = { version = "1.28.1", features = [
   "rt-multi-thread",
@@ -17,3 +13,7 @@ tokio = { version = "1.28.1", features = [
 ] }
 wgpu = "0.16.0"
 winit = "0.28.6"
+bitfield = "0.13.2"
+bytemuck = { version = "1.13.1", features = ["derive"] }
+clap = { version = "4.3.0", features = ["derive"] }
+gilrs = "0.10.2"
