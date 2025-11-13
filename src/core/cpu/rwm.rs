@@ -104,12 +104,12 @@ impl CPU {
     pub(super) fn txa(&mut self) -> usize {
         self.a = self.x;
         self.set_nz_flags(self.a);
-        1
+        2
     }
 
     fn txs(&mut self) -> usize {
         self.sp = self.x;
-        1
+        2
     }
 
     fn ldx(&mut self, operand: u8) -> usize {
@@ -121,13 +121,13 @@ impl CPU {
     pub(super) fn tax(&mut self) -> usize {
         self.x = self.a;
         self.set_nz_flags(self.x);
-        1
+        2
     }
 
     fn tsx(&mut self) -> usize {
         self.x = self.sp;
         self.set_nz_flags(self.x);
-        1
+        2
     }
 
     pub(super) fn dec(&mut self, operand: u8, address_mode: AddressMode) -> usize {

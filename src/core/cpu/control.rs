@@ -6,14 +6,15 @@ use super::{AddressMode, CoreError, StatusRegister, CPU};
 impl CPU {
     pub fn run_control_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode);
-        let operand = match opcode {
+        let (operand, page_cross) = match opcode {
             0x10 | 0x30 | 0x50 | 0x70 | 0x90 | 0xB0 | 0xD0 | 0xF0 | 0x24 | 0x2C | 0xA0 | 0xA4
             | 0xB4 | 0xAC | 0xBC | 0xC0 | 0xC4 | 0xCC | 0xE0 | 0xE4 | 0xEC => {
-                self.read_operand(address_mode).0
+                self.read_operand(address_mode)
             }
-            _ => 0,
+            _ => (0, false),
         };
 
+        let mut use_page_cross = false;
         let cycles = match opcode {
             0 => self.brk(),
             0x8 => self.php(),
@@ -65,7 +66,10 @@ impl CPU {
             0x88 => self.dey(),
             0x98 => self.tya(),
             0xA8 => self.tay(),
-            0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => self.ldy(operand),
+            0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                use_page_cross = true;
+                self.ldy(operand)
+            }
             0xC0 | 0xC4 | 0xCC => self.cpy(operand),
             0xE0 | 0xE4 | 0xEC => self.cpx(operand),
             0xC8 => self.iny(),
@@ -81,7 +85,7 @@ impl CPU {
             _ => self.pc += 1 + address_mode.byte_code_size(),
         }
 
-        Ok(cycles + address_mode.cycle_cost(false))
+        Ok(cycles + address_mode.cycle_cost(use_page_cross && page_cross))
     }
 
     fn brk(&mut self) -> usize {
@@ -96,7 +100,7 @@ impl CPU {
         let mut status = self.p;
         status.set_b(3u8);
         self.push_byte(status.0);
-        4
+        3
     }
 
     fn plp(&mut self) -> usize {
@@ -108,7 +112,7 @@ impl CPU {
 
     fn pha(&mut self) -> usize {
         self.push_byte(self.a);
-        4
+        3
     }
 
     fn pla(&mut self) -> usize {
