@@ -7,8 +7,7 @@ fn main() {
     let target = env::var("TARGET").unwrap();
 
     // On Linux, use system SDL3 (installed via package manager)
-    if target.contains("linux") {
-        println!("cargo:warning=Using SDL3 from vcpkg: C:\\Projects\\rnes\\vcpkg_installed\\x64-windows\\lib");
+    if target.contains("darwin") || target.contains("linux") {
         // On Linux in CI, pkg-config will handle SDL3 linking automatically
         // The sdl3 crate should handle this via its build script
         return;
@@ -23,10 +22,6 @@ fn main() {
         "x86-windows"
     } else if target.contains("aarch64") && target.contains("windows") {
         "arm64-windows"
-    } else if target.contains("x86_64") && target.contains("darwin") {
-        "x64-osx"
-    } else if target.contains("aarch64") && target.contains("darwin") {
-        "arm64-osx"
     } else {
         panic!("Unsupported target: {}", target);
     };
@@ -36,19 +31,14 @@ fn main() {
     let include_dir = vcpkg_root.join(vcpkg_target).join("include");
 
     // Check if the directories exist
-    if !lib_dir.exists() {
-        panic!(
-            "vcpkg SDL3 lib directory not found: {:?}\nRun 'vcpkg install sdl3' first",
-            lib_dir
-        );
+    if lib_dir.exists() {
+        println!("cargo:rustc-link-search=native={}", lib_dir.display());
     }
 
-    // Tell cargo to link the SDL3 library
-    println!("cargo:rustc-link-search=native={}", lib_dir.display());
-    println!("cargo:rustc-link-lib=SDL3");
-
-    // Also add the bin directory to the PATH for finding DLLs at runtime
-    println!("cargo:rustc-link-search=native={}", bin_dir.display());
+    if bin_dir.exists() {
+        // Also add the bin directory to the PATH for finding DLLs at runtime
+        println!("cargo:rustc-link-search=native={}", bin_dir.display());
+    }
 
     // Set include path for any C/C++ code that might need it
     println!("cargo:include={}", include_dir.display());

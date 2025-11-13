@@ -1301,9 +1301,6 @@ name = "sdl3-sys"
 version = "0.5.10+SDL3-3.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c531aa18059783450bcddc82a6effc48df5f173bb46142eb421ff2cfccf53984"
-dependencies = [
- "vcpkg",
-]
 
 [[package]]
 name = "shlex"
@@ -1529,12 +1526,6 @@ name = "uuid"
 version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8c5f0a0af699448548ad1a2fbf920fb4bee257eae39953ba95cb84891a0446a"
-
-[[package]]
-name = "vcpkg"
-version = "0.2.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
 
 [[package]]
 name = "vec_map"
