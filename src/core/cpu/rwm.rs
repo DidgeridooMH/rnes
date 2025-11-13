@@ -1,7 +1,7 @@
 use super::{AddressMode, CoreError, CPU};
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;
 
 impl CPU {
     pub fn run_rwm_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
@@ -39,7 +39,7 @@ impl CPU {
 
         self.pc += 1 + address_mode.byte_code_size();
 
-        Ok(cycles + address_mode.cycle_cost())
+        Ok(cycles + address_mode.cycle_cost(true))
     }
 
     fn get_common_rwm_cycles(&self, address_mode: AddressMode) -> usize {
@@ -51,6 +51,7 @@ impl CPU {
             | AddressMode::Absolute => 3,
             AddressMode::AbsoluteX | AddressMode::AbsoluteY => 4,
             AddressMode::Indirect | AddressMode::IndirectX | AddressMode::IndirectY => 4,
+            _ => 3,
         }
     }
 

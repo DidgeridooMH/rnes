@@ -1,3 +1,4 @@
+mod address_mode;
 mod alu;
 mod control;
 mod memory;
@@ -10,7 +11,7 @@ mod unofficial;
 // #[cfg(test)]
 // mod tests;
 
-use crate::core::cpu::opcodes::OPCODES;
+use crate::core::cpu::{address_mode::AddressMode, opcodes::OPCODES};
 
 use self::{memory::InternalRam, status::StatusRegister};
 use super::{Addressable, Bus, CoreError};
@@ -161,7 +162,8 @@ impl CPU {
 
     fn get_address(&self, address_mode: AddressMode) -> (u16, bool) {
         match address_mode {
-            AddressMode::Accumulator => unimplemented!("This should not happen."),
+            AddressMode::Implied => (0, false),
+            AddressMode::Accumulator => (0, false),
             AddressMode::Immediate => (self.pc + 1, false),
             AddressMode::ZeroPage => (self.bus.borrow_mut().read_byte(self.pc + 1) as u16, false),
             AddressMode::ZeroPageX => (
@@ -257,67 +259,5 @@ impl CPU {
         println!("A: ${:X}\tX: ${:X}", self.a, self.x);
         println!("Y: ${:X}\tSP: ${:X}", self.y, self.sp);
         println!("PC: ${:X}\tP: {:?}", self.pc, self.p);
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-enum AddressMode {
-    Accumulator,
-    Immediate,
-    ZeroPage,
-    ZeroPageX,
-    ZeroPageY,
-    Absolute,
-    AbsoluteX,
-    AbsoluteY,
-    Indirect,
-    IndirectX,
-    IndirectY,
-}
-
-impl AddressMode {
-    pub fn from_code(opcode: u8) -> AddressMode {
-        match (opcode >> 2) % 8 {
-            0 => AddressMode::IndirectX,
-            1 => AddressMode::ZeroPage,
-            2 => AddressMode::Immediate,
-            3 => AddressMode::Absolute,
-            4 => AddressMode::IndirectY,
-            5 => AddressMode::ZeroPageX,
-            6 => AddressMode::AbsoluteY,
-            7 => AddressMode::AbsoluteX,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn cycle_cost(&self) -> usize {
-        match &self {
-            AddressMode::Accumulator | AddressMode::Immediate => 1,
-            AddressMode::ZeroPage => 2,
-            AddressMode::ZeroPageX
-            | AddressMode::ZeroPageY
-            | AddressMode::Absolute
-            | AddressMode::AbsoluteX
-            | AddressMode::AbsoluteY => 3,
-            AddressMode::IndirectX => 5,
-            AddressMode::IndirectY => 4,
-            AddressMode::Indirect => 5,
-        }
-    }
-
-    pub fn byte_code_size(&self) -> u16 {
-        match &self {
-            AddressMode::Accumulator => 0,
-            AddressMode::Immediate
-            | AddressMode::ZeroPage
-            | AddressMode::ZeroPageX
-            | AddressMode::ZeroPageY
-            | AddressMode::IndirectX
-            | AddressMode::IndirectY => 1,
-            AddressMode::Absolute
-            | AddressMode::AbsoluteX
-            | AddressMode::AbsoluteY
-            | AddressMode::Indirect => 2,
-        }
     }
 }

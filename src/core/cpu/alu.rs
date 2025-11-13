@@ -34,20 +34,12 @@ impl OpcodeGroup {
 impl CPU {
     pub fn run_alu_op(&mut self, opcode: u8) -> usize {
         let address_mode = AddressMode::from_code(opcode);
-        let (address, mut page_cross) = self.get_address(address_mode);
         let opcode_group = OpcodeGroup::from_code(opcode >> 5);
-        let mut operand = 0;
-        if opcode_group != OpcodeGroup::Sta {
-            operand = self.bus.borrow_mut().read_byte(address);
-        }
-
-        if self.show_ops {
-            if let AddressMode::Immediate = address_mode {
-                print!(" #${:02X}", operand);
-            } else {
-                print!(" ${:04X} = #${:02X}", address, operand);
-            }
-        }
+        let (operand, page_cross) = if opcode_group != OpcodeGroup::Sta {
+            self.read_operand(address_mode)
+        } else {
+            (self.a, true)
+        };
 
         match opcode_group {
             OpcodeGroup::Ora => self.ora(operand),
@@ -58,7 +50,7 @@ impl CPU {
                 if opcode == 0x89 {
                     self.nop(address_mode);
                 } else {
-                    self.bus.borrow_mut().write_byte(address, self.a);
+                    self.write_operand(self.a, address_mode);
                 }
             }
             OpcodeGroup::Lda => self.lda(operand),
@@ -66,24 +58,9 @@ impl CPU {
             OpcodeGroup::Sbc => self.sbc(operand),
         }
 
-        let mut cycles = 1 + address_mode.cycle_cost();
-
-        if opcode_group == OpcodeGroup::Sta {
-            match address_mode {
-                AddressMode::AbsoluteX | AddressMode::AbsoluteY | AddressMode::IndirectY => {
-                    page_cross = true;
-                }
-                _ => {}
-            }
-        }
-
-        if page_cross {
-            cycles += 1;
-        }
-
         self.pc += 1 + address_mode.byte_code_size();
 
-        cycles
+        1 + address_mode.cycle_cost(page_cross)
     }
 
     pub(super) fn ora(&mut self, operand: u8) {
