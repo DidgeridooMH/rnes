@@ -1,8 +1,5 @@
 use super::{AddressMode, CoreError, StatusRegister, CPU};
 
-// #[cfg(test)]
-// mod tests;
-
 impl CPU {
     pub fn run_control_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode);

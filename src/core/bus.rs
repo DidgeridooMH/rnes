@@ -3,9 +3,6 @@ use std::fmt::Display;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-// #[cfg(test)]
-// mod tests;
-
 pub trait Addressable {
     fn read_byte(&mut self, address: u16) -> Option<u8>;
     fn write_byte(&mut self, address: u16, data: u8);

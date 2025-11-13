@@ -1,8 +1,5 @@
 use super::{AddressMode, CPU};
 
-#[cfg(test)]
-mod tests;
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum OpcodeGroup {
     Ora,

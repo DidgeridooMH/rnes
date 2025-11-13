@@ -1,10 +1,7 @@
 use super::{AddressMode, CoreError, CPU};
 
-// #[cfg(test)]
-// mod tests;
-
 impl CPU {
-    pub fn run_rwm_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
+    pub fn run_rmw_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode);
 
         let (operand, page_cross) = match opcode {

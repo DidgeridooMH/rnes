@@ -4,12 +4,9 @@ mod control;
 mod memory;
 mod nop;
 mod opcodes;
-mod rwm;
+mod rmw;
 mod status;
 mod unofficial;
-
-// #[cfg(test)]
-// mod tests;
 
 use crate::core::cpu::{address_mode::AddressMode, opcodes::OPCODES};
 
@@ -143,7 +140,7 @@ impl CPU {
         let cycles = match opcode % 4 {
             0 => self.run_control_op(opcode)?,
             1 => self.run_alu_op(opcode),
-            2 => self.run_rwm_op(opcode)?,
+            2 => self.run_rmw_op(opcode)?,
             3 => self.run_unofficial_op(opcode)?,
             _ => unreachable!(),
         };

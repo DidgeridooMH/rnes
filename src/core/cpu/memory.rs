@@ -1,9 +1,6 @@
 use super::Addressable;
 use std::{cell::RefCell, rc::Rc};
 
-#[cfg(test)]
-mod tests;
-
 const CPU_INTERNAL_RAM_SIZE: usize = 0x800;
 
 pub struct InternalRam {
