@@ -82,7 +82,7 @@ impl CPU {
     }
 
     fn lxa(&mut self, operand: u8) -> usize {
-        self.a = operand & 0xFF;
+        self.a = operand;
         self.x = self.a;
         1
     }
