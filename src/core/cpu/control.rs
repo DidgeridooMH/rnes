@@ -119,7 +119,7 @@ impl CPU {
 
     fn branch(&mut self, operand: u8, should_branch: bool) -> usize {
         if !should_branch {
-            return 2;
+            return 1;
         }
 
         let offset = operand as u16;
@@ -133,7 +133,7 @@ impl CPU {
         if (prev_pc & 0xFF00) != (self.pc & 0xFF00) {
             3
         } else {
-            4
+            2
         }
     }
 
