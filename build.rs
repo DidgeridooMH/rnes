@@ -44,6 +44,4 @@ fn main() {
     // Tell cargo to re-run this script if vcpkg directories change
     println!("cargo:rerun-if-changed={}", lib_dir.display());
     println!("cargo:rerun-if-changed={}", bin_dir.display());
-
-    println!("cargo:warning=Using SDL3 from vcpkg: {}", lib_dir.display());
 }

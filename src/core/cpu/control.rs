@@ -6,7 +6,13 @@ use super::{AddressMode, CoreError, StatusRegister, CPU};
 impl CPU {
     pub fn run_control_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode);
-        let (operand, page_cross) = self.read_operand(address_mode);
+        let operand = match opcode {
+            0x10 | 0x30 | 0x50 | 0x70 | 0x90 | 0xB0 | 0xD0 | 0xF0 | 0x24 | 0x2C | 0xA0 | 0xA4
+            | 0xB4 | 0xAC | 0xBC | 0xC0 | 0xC4 | 0xCC | 0xE0 | 0xE4 | 0xEC => {
+                self.read_operand(address_mode).0
+            }
+            _ => 0,
+        };
 
         let cycles = match opcode {
             0 => self.brk(),
@@ -14,14 +20,14 @@ impl CPU {
             0x28 => self.plp(),
             0x48 => self.pha(),
             0x68 => self.pla(),
-            0x10 => self.branch(!self.p.n()),
-            0x30 => self.branch(self.p.n()),
-            0x50 => self.branch(!self.p.v()),
-            0x70 => self.branch(self.p.v()),
-            0x90 => self.branch(!self.p.c()),
-            0xB0 => self.branch(self.p.c()),
-            0xD0 => self.branch(!self.p.z()),
-            0xF0 => self.branch(self.p.z()),
+            0x10 => self.branch(operand, !self.p.n()),
+            0x30 => self.branch(operand, self.p.n()),
+            0x50 => self.branch(operand, !self.p.v()),
+            0x70 => self.branch(operand, self.p.v()),
+            0x90 => self.branch(operand, !self.p.c()),
+            0xB0 => self.branch(operand, self.p.c()),
+            0xD0 => self.branch(operand, !self.p.z()),
+            0xF0 => self.branch(operand, self.p.z()),
             0x18 => {
                 self.p.set_c(false);
                 2
@@ -71,11 +77,11 @@ impl CPU {
         };
 
         match opcode {
-            0x00 | 0x80 | 0x4C | 0x6C => {}
+            0x00 | 0x20 | 0x4C | 0x6C | 0x40 => {}
             _ => self.pc += 1 + address_mode.byte_code_size(),
         }
 
-        Ok(cycles + address_mode.cycle_cost(page_cross))
+        Ok(cycles + address_mode.cycle_cost(false))
     }
 
     fn brk(&mut self) -> usize {
@@ -90,7 +96,7 @@ impl CPU {
         let mut status = self.p;
         status.set_b(3u8);
         self.push_byte(status.0);
-        3
+        4
     }
 
     fn plp(&mut self) -> usize {
@@ -102,7 +108,7 @@ impl CPU {
 
     fn pha(&mut self) -> usize {
         self.push_byte(self.a);
-        3
+        4
     }
 
     fn pla(&mut self) -> usize {
@@ -111,12 +117,12 @@ impl CPU {
         4
     }
 
-    fn branch(&mut self, should_branch: bool) -> usize {
+    fn branch(&mut self, operand: u8, should_branch: bool) -> usize {
         if !should_branch {
             return 2;
         }
 
-        let offset = self.bus.borrow_mut().read_byte(self.pc + 1) as u16;
+        let offset = operand as u16;
         let prev_pc = self.pc + 1;
         self.pc = if offset >= 0x80 {
             self.pc.wrapping_add(offset | 0xFF00)

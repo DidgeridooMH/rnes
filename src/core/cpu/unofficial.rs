@@ -3,7 +3,10 @@ use crate::core::{cpu::AddressMode, CoreError, CPU};
 impl CPU {
     pub fn run_unofficial_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
         let address_mode = AddressMode::from_code(opcode);
-        let (operand, page_cross) = self.read_operand(address_mode);
+        let (operand, page_cross) = match opcode {
+            0xAB | 0x83 | 0x87 | 0x8F | 0x97 | 0x93 | 0x9F | 0x9B => (0, false),
+            _ => self.read_operand(address_mode),
+        };
 
         let mut use_page_cross = false;
 

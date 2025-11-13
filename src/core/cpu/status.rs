@@ -26,7 +26,7 @@ impl std::fmt::Display for StatusRegister {
         status.push((b'N' + !self.n() as u8 * 0x20) as char);
         status.push((b'V' + !self.v() as u8 * 0x20) as char);
         status.push('u');
-        status.push((b'B' + !self.b() * 0x20) as char);
+        status.push((b'B' + (self.b() == 0) as u8 * 0x20) as char);
         status.push((b'D' + !self.d() as u8 * 0x20) as char);
         status.push((b'I' + !self.i() as u8 * 0x20) as char);
         status.push((b'Z' + !self.z() as u8 * 0x20) as char);

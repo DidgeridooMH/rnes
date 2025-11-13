@@ -127,7 +127,7 @@ impl CPU {
         let opcode = self.bus.borrow_mut().read_byte(self.pc);
         if self.show_ops {
             print!(
-                "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: {}",
+                "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: ({:02X}) {} {}",
                 self.cycles,
                 self.a,
                 self.x,
@@ -135,7 +135,9 @@ impl CPU {
                 self.sp,
                 self.p,
                 self.pc,
-                OPCODES[opcode as usize]
+                opcode,
+                OPCODES[opcode as usize],
+                AddressMode::from_code(opcode)
             );
         }
         let cycles = match opcode % 4 {
@@ -162,8 +164,9 @@ impl CPU {
 
     fn get_address(&self, address_mode: AddressMode) -> (u16, bool) {
         match address_mode {
-            AddressMode::Implied => (0, false),
-            AddressMode::Accumulator => (0, false),
+            AddressMode::Implied | AddressMode::Accumulator => {
+                panic!("These should not get addresses")
+            }
             AddressMode::Immediate => (self.pc + 1, false),
             AddressMode::ZeroPage => (self.bus.borrow_mut().read_byte(self.pc + 1) as u16, false),
             AddressMode::ZeroPageX => (

@@ -5,28 +5,30 @@ use super::{AddressMode, CoreError, CPU};
 
 impl CPU {
     pub fn run_rwm_op(&mut self, opcode: u8) -> Result<usize, CoreError> {
-        let mut address_mode = AddressMode::from_code(opcode);
+        let address_mode = AddressMode::from_code(opcode);
 
-        if let AddressMode::Immediate | AddressMode::AbsoluteY = address_mode {
-            address_mode = AddressMode::Accumulator;
-        }
-
-        let operand = self.read_operand(address_mode).0;
+        let operand = match opcode {
+            0x86 | 0x96 | 0x8E | 0x8A | 0x9A | 0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE | 0xAA | 0xBA
+            | 0xCA | 0x1A | 0x3A | 0x5A | 0x7A | 0x82 | 0xC2 | 0xDA | 0xE2 | 0xEA | 0xFA | 0x9E => {
+                None
+            }
+            _ => Some(self.read_operand(address_mode).0),
+        };
 
         let cycles = match opcode {
-            0x06 | 0x0A | 0x0E | 0x16 | 0x1E => self.asl(operand, address_mode),
-            0x2A | 0x26 | 0x36 | 0x2E | 0x3E => self.rol(operand, address_mode),
-            0x4A | 0x46 | 0x56 | 0x4E | 0x5E => self.lsr(operand, address_mode),
-            0x6A | 0x66 | 0x76 | 0x6E | 0x7E => self.ror(operand, address_mode),
+            0x06 | 0x0A | 0x0E | 0x16 | 0x1E => self.asl(operand.unwrap(), address_mode),
+            0x2A | 0x26 | 0x36 | 0x2E | 0x3E => self.rol(operand.unwrap(), address_mode),
+            0x4A | 0x46 | 0x56 | 0x4E | 0x5E => self.lsr(operand.unwrap(), address_mode),
+            0x6A | 0x66 | 0x76 | 0x6E | 0x7E => self.ror(operand.unwrap(), address_mode),
             0x86 | 0x96 | 0x8E => self.stx(address_mode),
             0x8A => self.txa(),
             0x9A => self.txs(),
             0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => self.ldx(address_mode),
             0xAA => self.tax(),
             0xBA => self.tsx(),
-            0xC6 | 0xD6 | 0xCE | 0xDE => self.dec(operand, address_mode),
+            0xC6 | 0xD6 | 0xCE | 0xDE => self.dec(operand.unwrap(), address_mode),
             0xCA => self.dex(),
-            0xE6 | 0xF6 | 0xEE | 0xFE => self.inc(operand, address_mode),
+            0xE6 | 0xF6 | 0xEE | 0xFE => self.inc(operand.unwrap(), address_mode),
             0x1A | 0x3A | 0x5A | 0x7A | 0x82 | 0xC2 | 0xDA | 0xE2 | 0xEA | 0xFA => {
                 self.nop(address_mode)
             }
@@ -89,10 +91,7 @@ impl CPU {
         self.get_common_rwm_cycles(address_mode)
     }
 
-    fn stx(&mut self, mut address_mode: AddressMode) -> usize {
-        if let AddressMode::ZeroPageX = address_mode {
-            address_mode = AddressMode::ZeroPageY;
-        }
+    fn stx(&mut self, address_mode: AddressMode) -> usize {
         self.write_operand(self.x, address_mode);
         1
     }
@@ -109,13 +108,6 @@ impl CPU {
     }
 
     fn ldx(&mut self, address_mode: AddressMode) -> usize {
-        let address_mode = match address_mode {
-            AddressMode::IndirectX => AddressMode::Immediate,
-            AddressMode::ZeroPageX => AddressMode::ZeroPageY,
-            AddressMode::AbsoluteX => AddressMode::AbsoluteY,
-            _ => address_mode,
-        };
-
         let (operand, page_cross) = self.read_operand(address_mode);
         self.x = operand;
         self.set_nz_flags(self.x);

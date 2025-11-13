@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(super) enum AddressMode {
     Implied,
@@ -288,6 +290,28 @@ const OPCODE_ADDRESS_MODES: [AddressMode; 256] = [
     AddressMode::AbsoluteX, // 0xFE INC absolute,X
     AddressMode::AbsoluteX, // 0xFF *ISC absolute,X
 ];
+
+impl Display for AddressMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let display = match self {
+            &AddressMode::Implied | AddressMode::Accumulator => "",
+            AddressMode::Immediate => "#i",
+            AddressMode::ZeroPage => "d",
+            AddressMode::ZeroPageX => "d,x",
+            AddressMode::ZeroPageY => "d,y",
+            AddressMode::Absolute => "a",
+            AddressMode::AbsoluteX => "a,x",
+            AddressMode::AbsoluteY => "a,y",
+            AddressMode::Indirect => "(a)",
+            AddressMode::IndirectX => "(d,x)",
+            AddressMode::IndirectY => "(d),y",
+        };
+
+        write!(f, "{}", display)?;
+
+        Ok(())
+    }
+}
 
 impl AddressMode {
     pub fn from_code(opcode: u8) -> AddressMode {
