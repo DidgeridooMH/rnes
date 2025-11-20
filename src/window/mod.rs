@@ -37,7 +37,7 @@ impl MainWindow {
             .with_title("RNES")
             .with_inner_size(PhysicalSize::new(
                 NATIVE_RESOLUTION.width * SCALING_FACTOR,
-                (NATIVE_RESOLUTION.height - 16) * SCALING_FACTOR,
+                (NATIVE_RESOLUTION.height) * SCALING_FACTOR,
             ))
             .with_resize_increments(NATIVE_RESOLUTION)
             .build(event_loop)

@@ -233,7 +233,14 @@ impl PPU {
                 };
 
                 if sprite_color > 0 {
-                    if color_index & 3 > 0 && sprite_index == 0 && self.mask.show_background() {
+                    if color_index & 3 > 0
+                        && sprite_index == 0
+                        && self.mask.show_background()
+                        && self.mask.show_sprite()
+                        && self.cycle != 256
+                        && (self.cycle > 8
+                            || (self.mask.show_background_left() && self.mask.show_sprite_left()))
+                    {
                         self.sprite0_hit = true;
                     }
                     if (!behind_background || color_index & 3 == 0) && sprite_color % 4 > 0 {
@@ -244,7 +251,7 @@ impl PPU {
                     }
                 }
 
-                if self.scanline >= 8 && self.scanline < (240 - 8) {
+                if (0..240).contains(&self.scanline) {
                     screen[self.cycle as usize - 1
                         + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
                         palette::PALETTE[background_color as usize % 64];

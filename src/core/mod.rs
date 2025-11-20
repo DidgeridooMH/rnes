@@ -80,7 +80,7 @@ impl Nes {
         bus.borrow_mut()
             .register_region(0x4016..=0x4016, controller.clone());
 
-        let apu = Rc::new(RefCell::new(APU::default()));
+        let apu = Rc::new(RefCell::new(APU::new(1.0)));
         bus.borrow_mut()
             .register_region(0x4000..=0x4013, apu.clone());
         bus.borrow_mut()

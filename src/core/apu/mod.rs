@@ -28,9 +28,17 @@ pub struct APU {
     interrupt_inhibit: bool,
     audio_output: AudioOutput,
     frame_counter: FrameCounter,
+    volume: f32,
 }
 
 impl APU {
+    pub fn new(volume: f32) -> Self {
+        Self {
+            volume,
+            ..Default::default()
+        }
+    }
+
     pub fn tick(&mut self, cycles: usize) {
         for _ in 0..cycles {
             self.cycle += 1;
@@ -62,7 +70,8 @@ impl APU {
                 0.0
             };
 
-            self.audio_output.push_sample(pulse_sample + tnd_sample);
+            self.audio_output
+                .push_sample((pulse_sample + tnd_sample) * self.volume);
         }
     }
 

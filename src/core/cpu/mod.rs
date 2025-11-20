@@ -26,6 +26,7 @@ const OAM_DMA_SIZE: usize = 256;
 
 #[derive(Copy, Clone, Default)]
 pub struct OamDmaRequest {
+    started: bool,
     address: u16,
     length: usize,
 }
@@ -38,6 +39,7 @@ impl Addressable for OamDmaRequest {
 
     fn write_byte(&mut self, address: u16, data: u8) {
         if address == 0x4014 {
+            self.started = false;
             self.address = (data as u16) << 8;
             self.length = OAM_DMA_SIZE
         } else {
@@ -94,6 +96,14 @@ impl CPU {
     pub fn tick(&mut self) -> Result<usize, CoreError> {
         let oam_request_length = self.oam_request.borrow().length;
         if oam_request_length > 0 {
+            let mut request = self.oam_request.borrow_mut();
+            if !request.started {
+                request.started = true;
+                let extra_cycle = if self.cycles.is_multiple_of(2) { 0 } else { 1 };
+                return Ok(1 + extra_cycle);
+            }
+            drop(request);
+
             let mut bus = self.bus.borrow_mut();
             let oam_address = {
                 let mut request = self.oam_request.borrow_mut();
