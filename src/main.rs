@@ -125,7 +125,10 @@ impl App {
                     menu.set_rom_loaded(true);
                 }
             }
-            Err(e) => show_error(&self.window, &format!("Unable to open {}:\n{e}", path.display())),
+            Err(e) => show_error(
+                &self.window,
+                &format!("Unable to open {}:\n{e}", path.display()),
+            ),
         }
     }
 
@@ -160,7 +163,9 @@ impl App {
         if let Some(nes) = &self.nes {
             nes.controller.borrow_mut().set_pressed(0xFF, false);
         }
-        let Some(path) = &self.keymap_path else { return };
+        let Some(path) = &self.keymap_path else {
+            return;
+        };
         if let Err(e) = self.keymap.save(path) {
             eprintln!("Unable to save {}: {e}", path.display());
             if let Some(keymap_window) = &mut self.keymap_window {

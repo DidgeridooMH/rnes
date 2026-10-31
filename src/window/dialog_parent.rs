@@ -21,9 +21,8 @@ impl<'a> DialogParent<'a> {
                     rwh06::RawWindowHandle::Win32(handle)
                 })
             }
-            rwh05::RawWindowHandle::AppKit(h) => std::ptr::NonNull::new(h.ns_view).map(|view| {
-                rwh06::RawWindowHandle::AppKit(rwh06::AppKitWindowHandle::new(view))
-            }),
+            rwh05::RawWindowHandle::AppKit(h) => std::ptr::NonNull::new(h.ns_view)
+                .map(|view| rwh06::RawWindowHandle::AppKit(rwh06::AppKitWindowHandle::new(view))),
             _ => None,
         };
 

@@ -305,7 +305,8 @@ mod tests {
 
     #[test]
     fn parses_single_and_multiple_keys() {
-        let map = KeyMap::from_toml("[keyboard]\na = \"Z\"\nup = [\"W\", \"Up\"]\nb = []\n").unwrap();
+        let map =
+            KeyMap::from_toml("[keyboard]\na = \"Z\"\nup = [\"W\", \"Up\"]\nb = []\n").unwrap();
         assert_eq!(map.keys(Button::A), &[K::Z]);
         assert_eq!(map.keys(Button::Up), &[K::W, K::Up]);
         assert!(map.keys(Button::B).is_empty());

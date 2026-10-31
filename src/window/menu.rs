@@ -55,8 +55,8 @@ impl AppMenu {
             true,
             Some(Accelerator::new(modifier, Code::KeyK)),
         );
-        let options = Submenu::with_items("&Options", true, &[&key_mapping])
-            .map_err(|e| e.to_string())?;
+        let options =
+            Submenu::with_items("&Options", true, &[&key_mapping]).map_err(|e| e.to_string())?;
 
         let menu = Menu::new();
 

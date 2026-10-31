@@ -11,194 +11,159 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Headers SDL3 needs when it is built from source on Linux (audio backends
+  # are loaded at runtime, so these are build-time only), plus libudev for
+  # gamepad support.
+  LINUX_DEPS: >-
+    cmake ninja-build pkg-config libudev-dev libdbus-1-dev
+    libasound2-dev libpulse-dev libpipewire-0.3-dev
+    libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev
+    libxfixes-dev libxkbcommon-dev libwayland-dev libegl1-mesa-dev
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v5
-      - run: sudo apt update && sudo apt install -y libudev-dev
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_DEPS
+
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
       - name: Check formatting
         run: cargo fmt -- --check
+
       - name: Run clippy
         run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
 
   build-windows:
     needs: test
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 63aa65e65b9d2c08772ea15d25fb8fdb0d32e557 }
 
-      - run: vcpkg install
+      - name: Install SDL3
+        run: vcpkg install
 
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build
         run: cargo build --release
 
-      - name: Create release directory
+      - name: Package
         run: |
           New-Item -ItemType Directory -Force -Path release
           Copy-Item target\release\rnes.exe release\
           Copy-Item vcpkg_installed\x64-windows\bin\SDL3.dll release\
-
-      - name: Create Windows ZIP
-        run: |
           Compress-Archive -Path release\* -DestinationPath rnes-windows-x64.zip
 
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: rnes-windows-x64
           path: rnes-windows-x64.zip
 
-  build-macos:
+  build-linux:
     needs: test
-    runs-on: macos-latest
-
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y $LINUX_DEPS
 
-      - name: Install SDL3
-        run: brew install sdl3
-
-      - name: Setup Rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
 
       - name: Build
         run: cargo build --release
 
-      - name: Create release directory
+      - name: Show linked libraries
+        run: ldd target/release/rnes
+
+      - name: Package tarball
+        run: |
+          mkdir -p rnes-linux-x64
+          cp target/release/rnes README.md rnes-linux-x64/
+          tar -czf rnes-linux-x64.tar.gz rnes-linux-x64
+
+      - name: Package .deb
+        run: |
+          VERSION=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          PKG=debian-pkg
+          mkdir -p $PKG/DEBIAN $PKG/usr/bin $PKG/usr/share/doc/rnes
+          install -m 755 target/release/rnes $PKG/usr/bin/rnes
+          cp README.md $PKG/usr/share/doc/rnes/
+          cat > $PKG/DEBIAN/control <<EOF
+          Package: rnes
+          Version: $VERSION
+          Section: games
+          Priority: optional
+          Architecture: amd64
+          Depends: libc6, libudev1
+          Recommends: libvulkan1 | libgl1
+          Maintainer: DidgeridooMH
+          Description: NES emulator written in Rust
+           A Nintendo Entertainment System emulator. SDL3 is built in.
+          EOF
+          dpkg-deb --root-owner-group --build $PKG rnes_${VERSION}_amd64.deb
+          echo "DEB_FILE=rnes_${VERSION}_amd64.deb" >> $GITHUB_ENV
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rnes-linux-x64
+          path: |
+            rnes-linux-x64.tar.gz
+            ${{ env.DEB_FILE }}
+
+  build-macos:
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Show linked libraries
+        run: otool -L target/release/rnes
+
+      - name: Package
         run: |
           mkdir -p release
           cp target/release/rnes release/
+          cd release && zip -r ../rnes-macos-arm64.zip *
 
-      - name: Create macOS ZIP
-        run: |
-          cd release
-          zip -r ../rnes-macos-x64.zip *
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: rnes-macos-x64
-          path: rnes-macos-x64.zip
-
-  # build-linux:
-  #   needs: test
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y build-essential pkg-config libssl-dev libudev-dev libsdl3
-
-  #     - name: Setup Rust
-  #       uses: actions-rust-lang/setup-rust-toolchain@v1
-
-  #     - name: Build
-  #       run: cargo build --release
-
-  #     - name: Install cargo-deb
-  #       run: cargo install cargo-deb
-
-  #     - name: Create Debian package structure
-  #       run: |
-  #         mkdir -p debian-pkg/DEBIAN
-  #         mkdir -p debian-pkg/usr/bin
-  #         mkdir -p debian-pkg/usr/share/applications
-  #         mkdir -p debian-pkg/usr/share/doc/rnes
-
-  #         # Copy binary
-  #         cp target/release/rnes debian-pkg/usr/bin/
-
-  #         # Create control file
-  #         cat > debian-pkg/DEBIAN/control << EOF
-  #         Package: rnes
-  #         Version: 0.1.0
-  #         Section: games
-  #         Priority: optional
-  #         Architecture: amd64
-  #         Depends: libsdl3-0 | libsdl3-dev
-  #         Maintainer: DidgeridooMH
-  #         Description: NES Emulator written in Rust
-  #          A Nintendo Entertainment System (NES) emulator implementation
-  #          written in Rust with SDL3 support.
-  #         EOF
-
-  #         # Create postinst script to suggest SDL3 installation
-  #         cat > debian-pkg/DEBIAN/postinst << 'EOF'
-  #         #!/bin/bash
-  #         set -e
-
-  #         # Check if SDL3 is available
-  #         if ! ldconfig -p | grep -q libSDL3; then
-  #             echo "============================================"
-  #             echo "SDL3 library not found!"
-  #             echo "Please install SDL3 from your package manager or from:"
-  #             echo "https://github.com/libsdl-org/SDL/releases"
-  #             echo "============================================"
-  #         fi
-
-  #         exit 0
-  #         EOF
-
-  #         chmod 755 debian-pkg/DEBIAN/postinst
-
-  #         # Create copyright file
-  #         cat > debian-pkg/usr/share/doc/rnes/copyright << EOF
-  #         Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-  #         Upstream-Name: rnes
-  #         Source: https://github.com/DidgeridooMH/rnes
-
-  #         Files: *
-  #         Copyright: 2025 DidgeridooMH
-  #         License: GPL-3.0-or-later
-  #         EOF
-
-  #     - name: Build Debian package
-  #       run: |
-  #         dpkg-deb --build debian-pkg rnes_0.1.0_amd64.deb
-
-  #     - name: Upload Linux artifact
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: rnes-linux-x64
-  #         path: rnes_0.1.0_amd64.deb
+          name: rnes-macos-arm64
+          path: rnes-macos-arm64.zip
 
   release:
-    needs: [build-windows, build-macos]
+    needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
-
+    permissions:
+      contents: write
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/rnes-windows-x64/rnes-windows-x64.zip
-            artifacts/rnes-macos-x64/rnes-macos-x64.zip
-            artifacts/rnes-linux-x64/rnes_0.1.0_amd64.deb
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            artifacts/rnes-windows-x64/*.zip
+            artifacts/rnes-linux-x64/*.tar.gz
+            artifacts/rnes-linux-x64/*.deb
+            artifacts/rnes-macos-arm64/*.zip
+          fail_on_unmatched_files: true

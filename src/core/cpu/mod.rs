@@ -138,8 +138,8 @@ impl CPU {
         }
 
         let opcode = self.bus.borrow_mut().read_byte(self.pc);
-        let show_ops = self.show_ops
-            || crate::core::TRACE_WRITES.load(std::sync::atomic::Ordering::Relaxed);
+        let show_ops =
+            self.show_ops || crate::core::TRACE_WRITES.load(std::sync::atomic::Ordering::Relaxed);
         if show_ops {
             print!(
                 "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: ({:02X}) {} {}",

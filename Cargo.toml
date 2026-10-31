@@ -27,3 +27,9 @@ font8x8 = "0.3.1"
 
 [target.'cfg(any(target_os = "windows", target_os = "macos"))'.dependencies]
 muda = "0.21.2"
+
+# Linux and macOS build SDL3 from source and link it statically, so release
+# binaries don't depend on an SDL3 package being installed. Windows uses the
+# vcpkg-provided SDL3 (see build.rs).
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+sdl3 = { version = "0.16.1", features = ["build-from-source-static"] }

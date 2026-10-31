@@ -322,7 +322,9 @@ impl MainWindow {
 
     pub fn set_subtitle(&self, subtitle: &str) {
         match &self.rom_name {
-            Some(name) => self.window.set_title(&format!("RNES - {name} ({subtitle} fps)")),
+            Some(name) => self
+                .window
+                .set_title(&format!("RNES - {name} ({subtitle} fps)")),
             None => self.window.set_title(&format!("RNES: {subtitle}")),
         }
     }

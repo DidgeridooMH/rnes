@@ -63,13 +63,20 @@ fn parse_dump(spec: &str) -> Result<Vec<u32>, String> {
     let mut frames = Vec::new();
     for part in spec.split(',').map(str::trim).filter(|e| !e.is_empty()) {
         let (range, step) = match part.split_once('/') {
-            Some((r, s)) => (r, s.parse::<u32>().map_err(|_| format!("Bad step '{part}'"))?),
+            Some((r, s)) => (
+                r,
+                s.parse::<u32>().map_err(|_| format!("Bad step '{part}'"))?,
+            ),
             None => (part, 1),
         };
         match range.split_once('-') {
             Some((a, b)) => {
-                let a = a.parse::<u32>().map_err(|_| format!("Bad range '{part}'"))?;
-                let b = b.parse::<u32>().map_err(|_| format!("Bad range '{part}'"))?;
+                let a = a
+                    .parse::<u32>()
+                    .map_err(|_| format!("Bad range '{part}'"))?;
+                let b = b
+                    .parse::<u32>()
+                    .map_err(|_| format!("Bad range '{part}'"))?;
                 frames.extend((a..=b).step_by(step.max(1) as usize));
             }
             None => frames.push(range.parse().map_err(|_| format!("Bad frame '{part}'"))?),
@@ -106,8 +113,10 @@ pub fn run(nes: &mut Nes, opts: &HeadlessOptions) -> Result<(), String> {
         }
 
         if let Some((a, b)) = opts.trace {
-            crate::core::TRACE_WRITES
-                .store((a..=b).contains(&frame), std::sync::atomic::Ordering::Relaxed);
+            crate::core::TRACE_WRITES.store(
+                (a..=b).contains(&frame),
+                std::sync::atomic::Ordering::Relaxed,
+            );
         }
         nes.run_frame(&mut screen)?;
 
@@ -123,7 +132,12 @@ pub fn run(nes: &mut Nes, opts: &HeadlessOptions) -> Result<(), String> {
         while next_dump < dump.len() && dump[next_dump] <= frame {
             if dump[next_dump] == frame {
                 let path = opts.out_dir.join(format!("frame_{frame:05}.png"));
-                write_png(&path, &screen, NATIVE_RESOLUTION.width, NATIVE_RESOLUTION.height)?;
+                write_png(
+                    &path,
+                    &screen,
+                    NATIVE_RESOLUTION.width,
+                    NATIVE_RESOLUTION.height,
+                )?;
                 if opts.sheet {
                     sheet_frames.push(screen.clone());
                 }
@@ -142,7 +156,10 @@ pub fn run(nes: &mut Nes, opts: &HeadlessOptions) -> Result<(), String> {
 /// Tiles frames into a grid separated by 2px magenta gutters.
 fn write_sheet(path: &Path, frames: &[Vec<u32>]) -> Result<(), String> {
     const GUTTER: usize = 2;
-    let (fw, fh) = (NATIVE_RESOLUTION.width as usize, NATIVE_RESOLUTION.height as usize);
+    let (fw, fh) = (
+        NATIVE_RESOLUTION.width as usize,
+        NATIVE_RESOLUTION.height as usize,
+    );
     let cols = SHEET_COLUMNS.min(frames.len());
     let rows = frames.len().div_ceil(cols);
     let (w, h) = (cols * (fw + GUTTER) - GUTTER, rows * (fh + GUTTER) - GUTTER);
@@ -162,7 +179,11 @@ fn crc32(data: &[u8]) -> u32 {
     for &byte in data {
         crc ^= byte as u32;
         for _ in 0..8 {
-            crc = if crc & 1 != 0 { (crc >> 1) ^ 0xEDB8_8320 } else { crc >> 1 };
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xEDB8_8320
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc

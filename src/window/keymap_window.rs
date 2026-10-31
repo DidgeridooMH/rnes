@@ -74,7 +74,7 @@ impl KeyMapWindow {
         if self.view.listening.is_none() {
             return false;
         }
-        let blink = (now_ms / 400) % 2 == 0;
+        let blink = (now_ms / 400).is_multiple_of(2);
         let changed = blink != self.view.blink;
         self.view.blink = blink;
         changed
@@ -129,8 +129,7 @@ impl KeyMapWindow {
                 Some(Target::Button(button)) => {
                     self.view.listening = Some(button);
                     self.view.blink = true;
-                    self.view.status =
-                        format!("Press a key for {}. Esc cancels.", button.name());
+                    self.view.status = format!("Press a key for {}. Esc cancels.", button.name());
                     self.window.request_redraw();
                 }
                 Some(Target::Reset) => {

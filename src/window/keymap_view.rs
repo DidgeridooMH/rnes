@@ -130,11 +130,7 @@ impl Canvas {
                     if bits & (1 << col) != 0 {
                         for sy in 0..scale {
                             for sx in 0..scale {
-                                self.put(
-                                    gx + col * scale + sx,
-                                    y + row as i32 * scale + sy,
-                                    color,
-                                );
+                                self.put(gx + col * scale + sx, y + row as i32 * scale + sy, color);
                             }
                         }
                     }
@@ -290,7 +286,8 @@ impl KeyMapView {
         self.draw_controller(canvas);
         self.draw_labels(map, canvas);
         for button in Button::ALL {
-            self.hit_areas.push((button_area(button), Target::Button(button)));
+            self.hit_areas
+                .push((button_area(button), Target::Button(button)));
         }
 
         // Footer: status line and reset button.
@@ -333,7 +330,11 @@ impl KeyMapView {
             if let Some(color) = self.accent(button) {
                 canvas.rect(arm.inset(1), color);
             }
-            let arrow = if self.accent(button).is_some() { DPAD } else { DPAD_EDGE };
+            let arrow = if self.accent(button).is_some() {
+                DPAD
+            } else {
+                DPAD_EDGE
+            };
             canvas.arrow(arm.x + ARM / 2, arm.y + ARM / 2, dir as u8, arrow);
         }
         canvas.circle(DPAD_X, DPAD_Y, 4, 0x161616);
@@ -394,7 +395,14 @@ impl KeyMapView {
         }
     }
 
-    fn draw_label(&mut self, canvas: &mut Canvas, button: Button, rect: Rect, text: &str, color: u32) {
+    fn draw_label(
+        &mut self,
+        canvas: &mut Canvas,
+        button: Button,
+        rect: Rect,
+        text: &str,
+        color: u32,
+    ) {
         canvas.panel(rect, 3, LEADER, self.label_fill(button), 1);
         canvas.text(rect.x + 5, rect.y + 3, text, color, 1);
         self.hit_areas.push((rect, Target::Button(button)));
@@ -406,7 +414,8 @@ impl KeyMapView {
         // Left and A normally sit in side columns; if their text is too wide
         // for the margin they join the top/bottom rows instead.
         let left_fits = width_of(self, Button::Left) <= BODY_RECT.x - 12;
-        let a_fits = width_of(self, Button::A) <= CANVAS_WIDTH as i32 - (BODY_RECT.x + BODY_RECT.w) - 12;
+        let a_fits =
+            width_of(self, Button::A) <= CANVAS_WIDTH as i32 - (BODY_RECT.x + BODY_RECT.w) - 12;
 
         let mut top = vec![Button::Up, Button::Select, Button::Start];
         if !left_fits {
@@ -444,7 +453,11 @@ impl KeyMapView {
                 // Stagger elbows so neighbouring leaders never share a line.
                 let elbow_y = elbow_base + elbow_step * i as i32;
                 let (ax, ay) = row_anchor(button);
-                let box_edge = if row_y < BODY_RECT.y { row_y + LABEL_H } else { row_y };
+                let box_edge = if row_y < BODY_RECT.y {
+                    row_y + LABEL_H
+                } else {
+                    row_y
+                };
                 let leader = self.leader_color(button);
                 canvas.vline(ax, ay, elbow_y, leader);
                 canvas.hline(ax, cx, elbow_y, leader);
@@ -455,7 +468,9 @@ impl KeyMapView {
         }
 
         // Side columns.
-        for (button, left_side, fits) in [(Button::Left, true, left_fits), (Button::A, false, a_fits)] {
+        for (button, left_side, fits) in
+            [(Button::Left, true, left_fits), (Button::A, false, a_fits)]
+        {
             if !fits {
                 continue;
             }

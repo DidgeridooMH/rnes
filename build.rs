@@ -48,7 +48,11 @@ fn main() {
             if dll.exists() {
                 let dest = profile_dir.join("SDL3.dll");
                 if let Err(e) = std::fs::copy(&dll, &dest) {
-                    println!("cargo:warning=Failed to copy SDL3.dll to {}: {}", dest.display(), e);
+                    println!(
+                        "cargo:warning=Failed to copy SDL3.dll to {}: {}",
+                        dest.display(),
+                        e
+                    );
                 }
             } else {
                 println!(
