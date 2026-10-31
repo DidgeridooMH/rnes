@@ -68,19 +68,40 @@ The compiled binary will be in `target/release/rnes` (or `rnes.exe` on Windows).
 
 ## Usage
 
-To run RNES, use the following command:
+Run RNES with no arguments to open an empty window, then load a game with
+**File > Open ROM** (or `Ctrl+O`, `Cmd+O` on macOS). **File > Close ROM**
+stops the current game. Opening a new ROM while one is running replaces it.
+
+You can also load a ROM directly at startup:
 
 ```bash
 ./rnes --rom <ROM_FILE>
 ```
 
-Replace `<ROM_FILE>` with the path to your NES ROM file.
+The menu bar is available on Windows and macOS; on Linux use `Ctrl+O`.
 
 ### Command-line Options
 
 ```bash
+rnes                      # Open with no ROM loaded
 rnes --rom <ROM_FILE>     # Run the emulator with specified ROM
+rnes --sav <SAV_FILE>     # Preload battery-backed PRG-RAM from a save file
 ```
+
+### Headless Mode
+
+For debugging and automated testing, `--headless` runs a ROM without a window
+and writes PNG frames:
+
+```bash
+rnes --rom game.nes --headless --frames 600 \
+     --input "120:S,126:" --dump 300-600/30 --sheet --out headless_out
+```
+
+- `--input` scripted presses as `frame:buttons` (A B s=Select S=Start U D L R; empty releases)
+- `--dump` frames to save (`100`, `200-300`, `200-300/10`); `--sheet` also tiles them into `sheet.png`
+- `--trace A-B` logs PPU register writes and executed instructions for those frames
+- `--watch 0010,0011` prints RAM addresses every frame
 
 ## Continuous Integration
 

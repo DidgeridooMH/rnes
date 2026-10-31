@@ -8,8 +8,13 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+mod dialog_parent;
+mod menu;
 mod uniform;
 mod vertex;
+
+pub use dialog_parent::DialogParent;
+pub use menu::{AppMenu, MenuAction};
 
 use uniform::WindowUniform;
 
@@ -29,6 +34,7 @@ pub struct MainWindow {
     screen_texture: Texture,
     texture_bind_group: wgpu::BindGroup,
     config: SurfaceConfiguration,
+    rom_name: Option<String>,
 }
 
 impl MainWindow {
@@ -250,11 +256,38 @@ impl MainWindow {
             screen_texture,
             texture_bind_group,
             config,
+            rom_name: None,
         })
     }
 
+    /// Sets the window's client area to the default scaled NES resolution.
+    /// Call after attaching a menu bar so the menu doesn't eat into it.
+    pub fn reset_size(&self) {
+        self.window.set_inner_size(PhysicalSize::new(
+            NATIVE_RESOLUTION.width * SCALING_FACTOR,
+            NATIVE_RESOLUTION.height * SCALING_FACTOR,
+        ));
+    }
+
+    /// A handle for making native dialogs modal to this window.
+    pub fn dialog_parent(&self) -> DialogParent<'_> {
+        DialogParent::new(&self.window)
+    }
+
+    /// Sets the loaded ROM name shown in the title bar (None when no ROM).
+    pub fn set_rom_name(&mut self, name: Option<String>) {
+        self.rom_name = name;
+        match &self.rom_name {
+            Some(name) => self.window.set_title(&format!("RNES - {name}")),
+            None => self.window.set_title("RNES - File > Open ROM (Ctrl+O)"),
+        }
+    }
+
     pub fn set_subtitle(&self, subtitle: &str) {
-        self.window.set_title(&format!("RNES: {subtitle}"));
+        match &self.rom_name {
+            Some(name) => self.window.set_title(&format!("RNES - {name} ({subtitle} fps)")),
+            None => self.window.set_title(&format!("RNES: {subtitle}")),
+        }
     }
 
     pub fn input(&mut self, event: &WindowEvent, control_flow: &mut ControlFlow) {
