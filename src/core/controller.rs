@@ -1,5 +1,4 @@
 use gilrs::ev::Button;
-use winit::event::{ElementState, VirtualKeyCode};
 
 use crate::core::Addressable;
 
@@ -8,17 +7,6 @@ pub struct Controller {
     buttons: u8,
     current_buttons: u8,
 }
-
-const KEYMAPPING: [VirtualKeyCode; 8] = [
-    VirtualKeyCode::K,
-    VirtualKeyCode::J,
-    VirtualKeyCode::Comma,
-    VirtualKeyCode::Period,
-    VirtualKeyCode::W,
-    VirtualKeyCode::S,
-    VirtualKeyCode::A,
-    VirtualKeyCode::D,
-];
 
 fn button_bit(button: Button) -> Option<usize> {
     match button {
@@ -40,12 +28,12 @@ impl Controller {
         self.current_buttons = buttons;
     }
 
-    pub fn input_keyboard(&mut self, keycode: &VirtualKeyCode, state: &ElementState) {
-        if let Some(position) = KEYMAPPING.iter().position(|k| k == keycode) {
-            match state {
-                ElementState::Pressed => self.current_buttons |= 1 << position,
-                ElementState::Released => self.current_buttons &= !(1 << position),
-            }
+    /// Presses or releases every button in `mask` (see `keymap::Button::bit`).
+    pub fn set_pressed(&mut self, mask: u8, pressed: bool) {
+        if pressed {
+            self.current_buttons |= mask;
+        } else {
+            self.current_buttons &= !mask;
         }
     }
 

@@ -80,6 +80,36 @@ You can also load a ROM directly at startup:
 
 The menu bar is available on Windows and macOS; on Linux use `Ctrl+O`.
 
+### Controls
+
+Keys are read from `keymappings.toml` in the same folder as the executable.
+If the file doesn't exist it is created with the defaults:
+
+| NES    | Key |
+| ------ | --- |
+| D-pad  | W A S D |
+| A / B  | K / J |
+| Select | `,` |
+| Start  | `.` |
+
+**Options > Key Mapping** (`Ctrl+K`) shows a controller with the current keys.
+Click a button and press a key to rebind it (Esc cancels), hold keys to see
+which buttons light up, or press **Defaults** to reset. Changes are saved to
+the file immediately.
+
+The file can also be edited by hand. Each button takes one key or a list:
+
+```toml
+[keyboard]
+a = "K"
+up = ["W", "Up"]
+select = []        # unbound
+```
+
+Key names are winit `VirtualKeyCode` names (`A`-`Z`, `Key0`-`Key9`, `Up`,
+`Space`, `Return`, `LShift`, `Comma`, ...). If the file has an error, RNES says
+which line and uses the default keys.
+
 ### Command-line Options
 
 ```bash

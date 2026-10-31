@@ -8,6 +8,7 @@ pub enum MenuAction {
     OpenRom,
     CloseRom,
     Exit,
+    KeyMapping,
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -16,6 +17,7 @@ pub struct AppMenu {
     open: muda::MenuItem,
     close: muda::MenuItem,
     exit: muda::MenuItem,
+    key_mapping: muda::MenuItem,
 }
 
 #[cfg(any(target_os = "windows", target_os = "macos"))]
@@ -48,6 +50,14 @@ impl AppMenu {
         )
         .map_err(|e| e.to_string())?;
 
+        let key_mapping = MenuItem::new(
+            "&Key Mapping...",
+            true,
+            Some(Accelerator::new(modifier, Code::KeyK)),
+        );
+        let options = Submenu::with_items("&Options", true, &[&key_mapping])
+            .map_err(|e| e.to_string())?;
+
         let menu = Menu::new();
 
         // On macOS the first submenu becomes the application menu.
@@ -59,6 +69,7 @@ impl AppMenu {
         }
 
         menu.append(&file).map_err(|e| e.to_string())?;
+        menu.append(&options).map_err(|e| e.to_string())?;
 
         #[cfg(target_os = "windows")]
         {
@@ -77,6 +88,7 @@ impl AppMenu {
             open,
             close,
             exit,
+            key_mapping,
         })
     }
 
@@ -89,6 +101,8 @@ impl AppMenu {
                 return Some(MenuAction::CloseRom);
             } else if event.id == *self.exit.id() {
                 return Some(MenuAction::Exit);
+            } else if event.id == *self.key_mapping.id() {
+                return Some(MenuAction::KeyMapping);
             }
         }
         None

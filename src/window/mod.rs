@@ -9,11 +9,14 @@ use winit::{
 };
 
 mod dialog_parent;
+mod keymap_view;
+mod keymap_window;
 mod menu;
 mod uniform;
 mod vertex;
 
 pub use dialog_parent::DialogParent;
+pub use keymap_window::{preview as keymap_preview, KeyMapEvent, KeyMapWindow};
 pub use menu::{AppMenu, MenuAction};
 
 use uniform::WindowUniform;
@@ -37,7 +40,38 @@ pub struct MainWindow {
     rom_name: Option<String>,
 }
 
+/// Backends tried first: the native graphics API for each platform.
+#[cfg(target_os = "windows")]
+const PREFERRED_BACKENDS: wgpu::Backends = wgpu::Backends::DX12;
+#[cfg(target_os = "macos")]
+const PREFERRED_BACKENDS: wgpu::Backends = wgpu::Backends::METAL;
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+const PREFERRED_BACKENDS: wgpu::Backends = wgpu::Backends::VULKAN;
+
+/// Creates a surface for `window` and finds an adapter that can present to
+/// it using only the given backends.
+fn find_adapter(
+    window: &Window,
+    backends: wgpu::Backends,
+) -> Option<(wgpu::Surface, wgpu::Adapter)> {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends,
+        dx12_shader_compiler: Default::default(),
+    });
+    // SAFETY: the window outlives the surface (both are owned by MainWindow).
+    let surface = unsafe { instance.create_surface(window) }.ok()?;
+    let adapter = instance
+        .enumerate_adapters(backends)
+        .find(|adapter| adapter.is_surface_supported(&surface))?;
+    Some((surface, adapter))
+}
+
 impl MainWindow {
+    /// Makes the window visible. Call after the first frame has been drawn.
+    pub fn show(&self) {
+        self.window.set_visible(true);
+    }
+
     pub async fn new(event_loop: &EventLoop<()>) -> Result<Self, String> {
         let window = match WindowBuilder::new()
             .with_title("RNES")
@@ -46,6 +80,9 @@ impl MainWindow {
                 (NATIVE_RESOLUTION.height) * SCALING_FACTOR,
             ))
             .with_resize_increments(NATIVE_RESOLUTION)
+            // Shown by `show()` once the first frame is drawn, so the window
+            // doesn't sit blank while the GPU is initialized.
+            .with_visible(false)
             .build(event_loop)
         {
             Ok(w) => w,
@@ -54,17 +91,17 @@ impl MainWindow {
             }
         };
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            dx12_shader_compiler: Default::default(),
-        });
-
-        let surface = unsafe { instance.create_surface(&window) }.unwrap();
-
-        let adapter = instance
-            .enumerate_adapters(wgpu::Backends::all())
-            .find(|adapter| adapter.is_surface_supported(&surface))
-            .unwrap();
+        let (surface, adapter) = match wgpu::util::backend_bits_from_env() {
+            // An explicit WGPU_BACKEND is honored as-is.
+            Some(backends) => find_adapter(&window, backends),
+            // Otherwise try the platform's native API first. Initializing every
+            // backend is slow: creating a Vulkan instance loads all registered
+            // Vulkan layers (overlays from Steam, OBS, etc.), which can take
+            // over a second even though DX12 ends up being used on Windows.
+            None => find_adapter(&window, PREFERRED_BACKENDS)
+                .or_else(|| find_adapter(&window, wgpu::Backends::all())),
+        }
+        .ok_or("No compatible graphics adapter found")?;
 
         let (device, queue) = adapter
             .request_device(
@@ -76,7 +113,7 @@ impl MainWindow {
                 None,
             )
             .await
-            .unwrap();
+            .map_err(|e| format!("Unable to create graphics device: {e}"))?;
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         let surface_format = surface_capabilities

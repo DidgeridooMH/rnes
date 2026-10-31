@@ -2,13 +2,17 @@ use clap::Parser;
 use gilrs::{EventType, Gilrs};
 use rnes::{
     core::Nes,
-    window::{AppMenu, MainWindow, MenuAction, NATIVE_RESOLUTION},
+    keymap::{KeyMap, LoadStatus},
+    window::{
+        keymap_preview, AppMenu, KeyMapEvent, KeyMapWindow, MainWindow, MenuAction,
+        NATIVE_RESOLUTION,
+    },
 };
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
+    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
 };
 
 #[derive(Parser, Debug)]
@@ -49,6 +53,9 @@ struct Args {
     /// Battery save file to load into PRG-RAM ($6000-$7FFF) at startup.
     #[arg(long)]
     sav: Option<PathBuf>,
+    /// Debug: render the key mapping overlay to a PNG and exit.
+    #[arg(long, hide = true)]
+    render_keymap: Option<PathBuf>,
 }
 
 fn load_sav(nes: &Nes, path: &Path) -> Result<(), String> {
@@ -97,6 +104,9 @@ struct App {
     screen: Vec<u32>,
     window: MainWindow,
     menu: Option<AppMenu>,
+    keymap: KeyMap,
+    keymap_path: Option<PathBuf>,
+    keymap_window: Option<KeyMapWindow>,
 }
 
 impl App {
@@ -128,6 +138,37 @@ impl App {
         }
     }
 
+    fn open_keymap_window(&mut self, target: &EventLoopWindowTarget<()>) {
+        if let Some(keymap_window) = &self.keymap_window {
+            keymap_window.window.focus_window();
+            return;
+        }
+        match KeyMapWindow::new(target) {
+            Ok(mut keymap_window) => {
+                if self.keymap_path.is_none() {
+                    keymap_window
+                        .set_status("Can't locate keymappings.toml; changes won't be saved.");
+                }
+                self.keymap_window = Some(keymap_window);
+            }
+            Err(e) => show_error(&self.window, &format!("Unable to open key mapping:\n{e}")),
+        }
+    }
+
+    fn save_keymap(&mut self) {
+        // Keys may have been moved while held; release everything.
+        if let Some(nes) = &self.nes {
+            nes.controller.borrow_mut().set_pressed(0xFF, false);
+        }
+        let Some(path) = &self.keymap_path else { return };
+        if let Err(e) = self.keymap.save(path) {
+            eprintln!("Unable to save {}: {e}", path.display());
+            if let Some(keymap_window) = &mut self.keymap_window {
+                keymap_window.set_status(format!("Couldn't save: {e}"));
+            }
+        }
+    }
+
     fn pick_and_load(&mut self, cli: &Args) {
         let file = rfd::FileDialog::new()
             .set_title("Open ROM")
@@ -139,6 +180,56 @@ impl App {
             self.load(&path, cli);
         }
     }
+}
+
+/// Loads `keymappings.toml` from next to the executable, creating it with the
+/// defaults if missing. Also returns an error message if the file is invalid.
+fn load_keymap() -> (KeyMap, Option<PathBuf>, Option<String>) {
+    let Some(path) = KeyMap::default_path() else {
+        return (KeyMap::default(), None, None);
+    };
+    match KeyMap::load_or_create(&path) {
+        Ok((map, status)) => {
+            match status {
+                LoadStatus::Created => println!("Created {}", path.display()),
+                LoadStatus::CreateFailed(e) => {
+                    eprintln!("Unable to create {}: {e}", path.display())
+                }
+                LoadStatus::Loaded => {}
+            }
+            (map, Some(path), None)
+        }
+        Err(e) => {
+            let message = format!(
+                "{} has an error and was not loaded:\n\n{e}\n\
+                 The default keys are in use. Changing keys in Options > Key Mapping \
+                 will overwrite the file.",
+                path.display()
+            );
+            (KeyMap::default(), Some(path), Some(message))
+        }
+    }
+}
+
+fn render_keymap_preview(path: &Path) -> ! {
+    let map = KeyMap::default_path()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|text| KeyMap::from_toml(&text).ok())
+        .unwrap_or_default();
+    let canvas = keymap_preview(&map);
+    // Canvas pixels are 0xRRGGBB; the PNG writer takes 0xAABBGGRR.
+    let pixels: Vec<u32> = canvas
+        .pixels
+        .iter()
+        .map(|p| 0xFF000000 | (p & 0xFF) << 16 | (p & 0xFF00) | (p >> 16) & 0xFF)
+        .collect();
+    let result =
+        rnes::headless::write_png(path, &pixels, canvas.width as u32, canvas.height as u32);
+    if let Err(e) = result {
+        eprintln!("{e}");
+        std::process::exit(1);
+    }
+    std::process::exit(0);
 }
 
 fn run_headless(cli: &Args) -> ! {
@@ -172,9 +263,13 @@ fn run_headless(cli: &Args) -> ! {
 #[tokio::main]
 async fn main() {
     let cli = Args::parse();
+    if let Some(path) = &cli.render_keymap {
+        render_keymap_preview(path);
+    }
     if cli.headless {
         run_headless(&cli);
     }
+    let (keymap, keymap_path, keymap_error) = load_keymap();
 
     let event_loop = EventLoop::new();
     let window = match MainWindow::new(&event_loop).await {
@@ -205,16 +300,29 @@ async fn main() {
         ],
         window,
         menu,
+        keymap,
+        keymap_path,
+        keymap_window: None,
     };
     app.unload();
+    // Draw the first (blank) frame before showing the window so it never
+    // appears empty or white.
+    if let Err(e) = app.window.render(&app.screen) {
+        eprintln!("{e:?}");
+    }
+    app.window.show();
+    if let Some(message) = keymap_error {
+        show_error(&app.window, &message);
+    }
     if let Some(rom) = cli.rom.clone() {
         app.load(&rom, &cli);
     }
 
     let mut gamepad = Gilrs::new().unwrap();
     let mut modifiers = ModifiersState::empty();
+    let start_time = Instant::now();
 
-    event_loop.run(move |event, _, control_flow| {
+    event_loop.run(move |event, target, control_flow| {
         *control_flow = if app.nes.is_some() {
             // Emulation is paced by audio playback.
             ControlFlow::Poll
@@ -230,6 +338,9 @@ async fn main() {
                 app.window.input(event, control_flow);
                 match event {
                     WindowEvent::ModifiersChanged(state) => modifiers = *state,
+                    // Modifier releases go to whichever window has focus (e.g. the
+                    // key mapping window Ctrl+K just opened), so forget them here.
+                    WindowEvent::Focused(false) => modifiers = ModifiersState::empty(),
                     WindowEvent::KeyboardInput {
                         input:
                             KeyboardInput {
@@ -244,16 +355,28 @@ async fn main() {
                         } else {
                             modifiers.ctrl()
                         };
-                        if shortcut
-                            && *keycode == VirtualKeyCode::O
-                            && *state == ElementState::Pressed
-                        {
+                        let pressed = *state == ElementState::Pressed;
+                        if shortcut && pressed && *keycode == VirtualKeyCode::O {
                             app.pick_and_load(&cli);
+                        } else if shortcut && pressed && *keycode == VirtualKeyCode::K {
+                            app.open_keymap_window(target);
                         } else if let Some(nes) = &app.nes {
-                            nes.controller.borrow_mut().input_keyboard(keycode, state);
+                            let mask = app.keymap.buttons_for(*keycode);
+                            nes.controller.borrow_mut().set_pressed(mask, pressed);
                         }
                     }
                     _ => {}
+                }
+            }
+            Event::WindowEvent {
+                ref event,
+                window_id,
+            } if Some(window_id) == app.keymap_window.as_ref().map(|w| w.window.id()) => {
+                let keymap_window = app.keymap_window.as_mut().unwrap();
+                match keymap_window.handle_event(event, &mut app.keymap) {
+                    KeyMapEvent::Changed => app.save_keymap(),
+                    KeyMapEvent::Close => app.keymap_window = None,
+                    KeyMapEvent::None => {}
                 }
             }
             Event::RedrawRequested(window_id) if window_id == app.window.window.id() => {
@@ -261,12 +384,25 @@ async fn main() {
                     eprintln!("{e:?}");
                 }
             }
+            Event::RedrawRequested(window_id)
+                if Some(window_id) == app.keymap_window.as_ref().map(|w| w.window.id()) =>
+            {
+                let keymap = &app.keymap;
+                app.keymap_window.as_mut().unwrap().render(keymap);
+            }
             Event::MainEventsCleared => {
                 match app.menu.as_ref().and_then(|m| m.poll()) {
                     Some(MenuAction::OpenRom) => app.pick_and_load(&cli),
                     Some(MenuAction::CloseRom) => app.unload(),
                     Some(MenuAction::Exit) => *control_flow = ControlFlow::Exit,
+                    Some(MenuAction::KeyMapping) => app.open_keymap_window(target),
                     None => {}
+                }
+
+                if let Some(keymap_window) = &mut app.keymap_window {
+                    if keymap_window.tick(start_time.elapsed().as_millis()) {
+                        keymap_window.window.request_redraw();
+                    }
                 }
 
                 while let Some(gilrs::Event { event, .. }) = gamepad.next_event() {

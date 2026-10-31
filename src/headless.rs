@@ -187,7 +187,8 @@ fn chunk(out: &mut Vec<u8>, kind: &[u8; 4], data: &[u8]) {
 }
 
 /// Writes the screen buffer as an RGB PNG using uncompressed deflate blocks.
-fn write_png(path: &Path, screen: &[u32], w: u32, h: u32) -> Result<(), String> {
+/// Pixels are 0xAABBGGRR (the PPU palette format).
+pub fn write_png(path: &Path, screen: &[u32], w: u32, h: u32) -> Result<(), String> {
     let mut raw = Vec::with_capacity((w * 3 + 1) as usize * h as usize);
     for y in 0..h {
         raw.push(0); // filter: none
