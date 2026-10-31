@@ -2,14 +2,13 @@
 
 ## Automated Releases
 
-The project is configured with GitHub Actions to automatically build releases for Windows, macOS, and Linux.
+GitHub Actions builds Windows, Linux, and macOS releases. Builds are not
+code-signed.
 
 ### Creating a Release
 
-1. **Update version numbers:**
-
-   - Update `Cargo.toml` version
-   - Update version in `.github/workflows/main.yml` (Debian package version)
+1. **Update the version** in `Cargo.toml`. The Debian package version is read
+   from it automatically.
 
 2. **Commit and push changes:**
 
@@ -22,57 +21,53 @@ The project is configured with GitHub Actions to automatically build releases fo
 3. **Create and push a version tag:**
 
    ```bash
-   git tag v0.1.0
-   git push origin v0.1.0
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
    ```
 
 4. **GitHub Actions will automatically:**
-   - Build for Windows (x64) with SDL3.dll included in ZIP
-   - Build for macOS (x64) with SDL3 dylibs included in ZIP
-   - Build Debian package for Linux (amd64) with SDL3 dependency
-   - Create a GitHub Release with all artifacts attached
+   - Build `rnes-windows-x64.zip` (`rnes.exe` + `SDL3.dll`)
+   - Build `rnes-linux-x64.tar.gz` and `rnes_X.Y.Z_amd64.deb` (SDL3 built in)
+   - Build `rnes-macos-arm64.zip` (SDL3 built in)
+   - Create a GitHub Release with all of them attached
 
 ### Manual Testing
 
 To test the workflow without creating a release:
 
-1. Push to `main` branch or create a pull request
-2. The workflow will build all platforms and upload artifacts
-3. Download artifacts from the Actions tab to test
+1. Push to `main`, open a pull request, or run the workflow manually from the
+   Actions tab (**Run workflow**, any branch).
+2. The workflow builds all platforms and uploads the packages as artifacts.
+3. Download the artifacts from the run's summary page to test.
 
 ### Platform-Specific Notes
 
 #### Windows
 
-- ZIP file includes `rnes.exe` and `SDL3.dll`
-- No additional installation required
-
-#### macOS
-
-- ZIP file includes `rnes` binary and SDL3 `.dylib` files
-- Users may need to allow the app in System Preferences (Security)
+- The ZIP includes `rnes.exe` and `SDL3.dll`.
+- The executable is unsigned, so SmartScreen may warn on first launch.
 
 #### Linux
 
-- Debian package lists `libsdl3-0 | libsdl3-dev` as dependency
-- Users must install SDL3 separately as it's not yet in standard repositories
-- Post-installation script warns if SDL3 is not found
+- SDL3 is compiled in and statically linked, so no SDL3 package is needed.
+- The binary only links against glibc and libudev.
+- Install the `.deb` with `sudo apt install ./rnes_X.Y.Z_amd64.deb`, or run
+  `rnes` straight from the tarball.
+
+#### macOS
+
+- Built on Apple Silicon (arm64) with SDL3 statically linked.
+- The binary is unsigned; users may need to allow it in System Settings >
+  Privacy & Security, or run `xattr -d com.apple.quarantine rnes`.
 
 ## Troubleshooting
 
-### Build Failures
+**Formatting or clippy failures:** run `cargo fmt` and
+`cargo clippy -- -D warnings` locally before pushing. CI also builds with
+`RUSTFLAGS=-D warnings`, so deprecation warnings fail the build.
 
-**vcpkg cache issues:**
+**vcpkg/SDL3 issues on Windows:** check the "Install SDL3" step and
+`vcpkg.json`, then clear the Actions cache and re-run.
 
-- Clear the cache in GitHub Actions settings
-- Re-run the workflow
-
-**SDL3 not found:**
-
-- Verify vcpkg.json is correct
-- Check that vcpkg installation step completed successfully
-
-**Rust compilation errors:**
-
-- Ensure all platform-specific code is properly conditionally compiled
-- Check that dependencies are up to date in Cargo.toml
+**SDL3 build failures on Linux:** SDL3 is compiled with CMake; make sure the
+packages in `LINUX_DEPS` in `.github/workflows/main.yml` are installed.
