@@ -31,7 +31,7 @@ impl AppMenu {
         // Shortcuts are handled by the window's keyboard input; the
         // accelerators here only label the menu items.
         #[cfg(target_os = "macos")]
-        let modifier = Modifiers::SUPER;
+        let modifier = Modifiers::META;
         #[cfg(not(target_os = "macos"))]
         let modifier = Modifiers::CONTROL;
 
