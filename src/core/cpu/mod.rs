@@ -129,10 +129,18 @@ impl CPU {
             self.pc = self.bus.borrow_mut().read_word(vector_address);
             self.p.set_i(true);
             self.interrupt = None;
+
+            // Interrupt entry takes 7 cycles; the handler's first instruction
+            // runs on the next tick so the PPU stays in step.
+            const INTERRUPT_CYCLES: usize = 7;
+            self.cycles += INTERRUPT_CYCLES;
+            return Ok(INTERRUPT_CYCLES);
         }
 
         let opcode = self.bus.borrow_mut().read_byte(self.pc);
-        if self.show_ops {
+        let show_ops = self.show_ops
+            || crate::core::TRACE_WRITES.load(std::sync::atomic::Ordering::Relaxed);
+        if show_ops {
             print!(
                 "c{} A:{:02X} X:{:02X} Y:{:02X} S:{:02X} P:{} ${:04X}: ({:02X}) {} {}",
                 self.cycles,
@@ -155,7 +163,7 @@ impl CPU {
             _ => unreachable!(),
         };
 
-        if self.show_ops {
+        if show_ops {
             println!();
         }
 

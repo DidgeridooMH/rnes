@@ -4,3 +4,4 @@ roms/
 nes-test-roms
 *.log
 vcpkg_installed
+headless_out/

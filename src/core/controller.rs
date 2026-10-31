@@ -35,6 +35,11 @@ fn button_bit(button: Button) -> Option<usize> {
 }
 
 impl Controller {
+    /// Sets the full button state (bit order: A, B, Select, Start, Up, Down, Left, Right).
+    pub fn set_buttons(&mut self, buttons: u8) {
+        self.current_buttons = buttons;
+    }
+
     pub fn input_keyboard(&mut self, keycode: &VirtualKeyCode, state: &ElementState) {
         if let Some(position) = KEYMAPPING.iter().position(|k| k == keycode) {
             match state {

@@ -109,6 +109,12 @@ impl Addressable for PPU {
 
     fn write_byte(&mut self, address: u16, data: u8) {
         let address = address % 8 + 0x2000;
+        if super::TRACE_WRITES.load(std::sync::atomic::Ordering::Relaxed) && address != 0x2007 {
+            println!(
+                "ppu-write f{} sl{} dot{} ${address:04X}={data:02X}",
+                self.frame_total, self.scanline, self.cycle
+            );
+        }
 
         self.open_bus = data;
 

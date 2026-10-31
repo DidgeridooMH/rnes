@@ -13,6 +13,10 @@ use registers::{PPUAddress, PPUMask};
 use sprite::SpriteShift;
 pub use vram::VRam;
 
+/// When set, every write to a PPU register (except $2007) is printed with the
+/// frame, scanline, and dot it landed on. Used for timing debugging.
+pub static TRACE_WRITES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 const NAMETABLE_BASE_ADDR: u16 = 0x2000;
 
 const MAX_CYCLE: u32 = 340;
@@ -69,6 +73,7 @@ pub struct PPU {
     reset: bool,
     fine_x: u8,
     frame_count: u32,
+    frame_total: u32,
     internal_data_buffer: u8,
     vram_bus: Rc<RefCell<Bus>>,
     open_bus: u8,
@@ -104,6 +109,7 @@ impl PPU {
             reset: true,
             fine_x: 0,
             frame_count: 0,
+            frame_total: 0,
             internal_data_buffer: 0,
             vram_bus: bus,
             open_bus: 0,
@@ -265,6 +271,19 @@ impl PPU {
             if visible_scanline || prerender_scanline {
                 self.update_address();
             }
+        } else if (1..=256).contains(&self.cycle) && visible_scanline {
+            // With rendering disabled the PPU still outputs a color for every
+            // visible pixel: the backdrop, or the palette entry addressed by v
+            // when v points into palette RAM (the "background palette hack").
+            let palette_address = if (0x3F00..=0x3FFF).contains(&(self.v.0 & 0x3FFF)) {
+                self.v.0 & 0x3FFF
+            } else {
+                0x3F00
+            };
+            let color = self.vram_bus.borrow_mut().read_byte(palette_address);
+            screen[self.cycle as usize - 1
+                + self.scanline as usize * NATIVE_RESOLUTION.width as usize] =
+                palette::PALETTE[color as usize % 64];
         }
 
         self.increment_cycle();
@@ -279,6 +298,7 @@ impl PPU {
             if self.scanline > MAX_SCANLINE {
                 self.scanline = 0;
                 self.frame_count += 1;
+                self.frame_total += 1;
                 self.odd_frame = !self.odd_frame;
             }
             self.cycle = 0;

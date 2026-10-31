@@ -1,4 +1,9 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::yield_now;
+
+/// When set, audio samples are discarded so emulation is not throttled by
+/// playback. Used by the headless runner.
+pub static AUDIO_DISABLED: AtomicBool = AtomicBool::new(false);
 
 use sdl3::audio::{AudioFormat, AudioSpec, AudioStreamOwner};
 
@@ -39,6 +44,9 @@ impl Default for AudioOutput {
 
 impl AudioOutput {
     pub fn push_sample(&mut self, sample: f32) {
+        if AUDIO_DISABLED.load(Ordering::Relaxed) {
+            return;
+        }
         self.resampler.push(sample);
 
         let queued_samples = self.sound_sampler.queued_bytes().unwrap() as usize / size_of::<f32>();

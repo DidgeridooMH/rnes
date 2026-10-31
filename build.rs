@@ -38,6 +38,30 @@ fn main() {
     if bin_dir.exists() {
         // Also add the bin directory to the PATH for finding DLLs at runtime
         println!("cargo:rustc-link-search=native={}", bin_dir.display());
+
+        // Copy SDL3.dll next to the executable so it can be found at runtime.
+        // OUT_DIR is <target>/<profile>/build/<pkg>-<hash>/out, so the
+        // profile directory (where the exe lands) is three levels up.
+        let dll = bin_dir.join("SDL3.dll");
+        let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+        if let Some(profile_dir) = out_dir.ancestors().nth(3) {
+            if dll.exists() {
+                let dest = profile_dir.join("SDL3.dll");
+                if let Err(e) = std::fs::copy(&dll, &dest) {
+                    println!("cargo:warning=Failed to copy SDL3.dll to {}: {}", dest.display(), e);
+                }
+            } else {
+                println!(
+                    "cargo:warning=SDL3.dll not found at {}. Run `vcpkg install` to fetch SDL3.",
+                    dll.display()
+                );
+            }
+        }
+    } else {
+        println!(
+            "cargo:warning=vcpkg SDL3 not found at {}. Run `vcpkg install` in the project root.",
+            bin_dir.display()
+        );
     }
 
     // Set include path for any C/C++ code that might need it

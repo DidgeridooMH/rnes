@@ -58,6 +58,7 @@ impl Addressable for RwAddressable {
 
 pub struct Nes {
     cpu: CPU,
+    bus: Rc<RefCell<Bus>>,
     apu: Rc<RefCell<APU>>,
     ppu: Rc<RefCell<PPU>>,
     frame_count_start: Instant,
@@ -111,6 +112,7 @@ impl Nes {
 
         Ok(Self {
             cpu,
+            bus,
             apu,
             ppu,
             controller,
@@ -134,24 +136,50 @@ impl Nes {
 
         let mut used_cycles = 0;
         while used_cycles < cycles {
-            match self.cpu.tick() {
-                Ok(cycle_count) => {
-                    used_cycles += cycle_count;
-                    let mut ppu = self.ppu.borrow_mut();
-                    for _ in 0..(cycle_count * 3) {
-                        if ppu.tick(screen) {
-                            self.cpu.generate_nmi();
-                        }
-                    }
-                    self.apu.borrow_mut().tick(cycle_count);
-                }
-                Err(e) => {
-                    self.cpu.dump();
-                    return Err(e.to_string());
-                }
-            }
+            used_cycles += self.step(screen)?;
         }
 
         Ok(())
+    }
+
+    /// Executes one CPU step (instruction, interrupt, or DMA chunk) and
+    /// advances the PPU/APU to match. Returns the CPU cycles consumed.
+    fn step(&mut self, screen: &mut [u32]) -> Result<usize, String> {
+        match self.cpu.tick() {
+            Ok(cycle_count) => {
+                let mut ppu = self.ppu.borrow_mut();
+                for _ in 0..(cycle_count * 3) {
+                    if ppu.tick(screen) {
+                        self.cpu.generate_nmi();
+                    }
+                }
+                self.apu.borrow_mut().tick(cycle_count);
+                Ok(cycle_count)
+            }
+            Err(e) => {
+                self.cpu.dump();
+                Err(e.to_string())
+            }
+        }
+    }
+
+    /// Runs until the PPU completes a frame. Used by the headless runner.
+    pub fn run_frame(&mut self, screen: &mut [u32]) -> Result<(), String> {
+        let start = self.ppu.borrow().frame_count();
+        while self.ppu.borrow().frame_count() == start {
+            self.step(screen)?;
+        }
+        Ok(())
+    }
+
+    /// Writes a byte to the CPU bus (e.g. to preload battery-backed PRG-RAM).
+    pub fn poke(&self, address: u16, data: u8) {
+        self.bus.borrow_mut().write_byte(address, data);
+    }
+
+    /// Reads a byte from the CPU bus. Safe for RAM/ROM; reading PPU/APU
+    /// registers will trigger their side effects.
+    pub fn peek(&self, address: u16) -> u8 {
+        self.bus.borrow_mut().read_byte(address)
     }
 }
